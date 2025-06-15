@@ -1,10 +1,10 @@
-# PapillonOS
+# Monarch Passport
 
-PapillonOS is a premium, luxury web application inspired by the world of phygital fashion. It serves as a digital passport for exclusive experiences, blending the tactile allure of high fashion with the seamless interactivity of modern web technology.
+Monarch Passport is a premium, luxury web application inspired by the world of phygital fashion. It serves as a digital passport for exclusive experiences, blending the tactile allure of high fashion with the seamless interactivity of modern web technology.
 
-## What is PapillonOS?
+## What is Monarch Passport?
 
-PapillonOS is your gateway to the next generation of fashion and lifestyle engagement. Designed for discerning users and brands, it enables:
+Monarch Passport is your gateway to the next generation of fashion and lifestyle engagement. Designed for discerning users and brands, it enables:
 - **Digital stamp collection** at real-world events and pop-ups via QR code scanning
 - **WNGS**: A digital currency and reward system for participation and loyalty
 - **Achievements & Quests**: Complete fashion quests, earn rewards, and unlock exclusive content
@@ -12,7 +12,7 @@ PapillonOS is your gateway to the next generation of fashion and lifestyle engag
 
 ## Design System & Philosophy
 
-PapillonOS is built on a **custom luxury design system**, featuring:
+Monarch Passport is built on a **custom luxury design system**, featuring:
 - **Liquid Glassmorphism**: Multi-layered glass cards and overlays with blur, gold glow, and chromatic aberration (purple, gold, cyan) for a premium, futuristic feel
 - **Brighter Cards**: Glass cards use a white overlay and higher opacity for clarity and lift on dark backgrounds
 - **Gold Glow & Chromatic Effects**: Cards and buttons feature a gold glow and subtle colored edges for a synthwave-inspired, high-fashion look
@@ -54,8 +54,8 @@ PapillonOS is built on a **custom luxury design system**, featuring:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/papillonos-mvp.git
-   cd papillonos-mvp
+   git clone https://github.com/yourusername/monarch-passport-mvp.git
+   cd monarch-passport-mvp
    ```
 2. **Install dependencies:**
    ```bash
@@ -87,4 +87,4 @@ MIT License - see LICENSE file for details
 
 ---
 
-**PapillonOS**: Where luxury fashion meets the future of digital experience. 
+**Monarch Passport**: Where luxury fashion meets the future of digital experience. 

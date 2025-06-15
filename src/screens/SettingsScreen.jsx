@@ -268,7 +268,7 @@ const SettingsScreen = ({ themeMode, onToggleTheme, gradientKey, onGradientChang
               </SettingRow>
               <SettingRow>
                 <Label>Email</Label>
-                <span>ava@papillonos.com</span>
+                <span>ava@monarchpassport.com</span>
               </SettingRow>
               <SettingRow>
                 <Label htmlFor="emailPref">Email Preferences</Label>

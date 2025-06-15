@@ -117,7 +117,7 @@ function ReferralModal({ open, onClose }) {
             <span role="img" aria-label="QR">#️⃣</span>
           </QRContainer>
           <div style={{ color: '#FFD700', fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '1.05rem', marginBottom: 8 }}>
-            Join me on PapillonOS!
+            Join me on Monarch Passport!
           </div>
           <ModalButton
             onClick={() => window.open('https://www.instagram.com/', '_blank')}
