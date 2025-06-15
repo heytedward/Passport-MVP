@@ -404,7 +404,7 @@ function ProfileScreen() {
   // Mock data
   const profile = {
     name: 'Ava Papillon',
-    email: 'ava@papillonos.com',
+    email: 'ava@monarchpassport.com',
     avatar: '🦋',
   };
   const balance = 0;
