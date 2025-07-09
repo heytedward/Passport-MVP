@@ -3,7 +3,8 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 
 const gold = '#FFD700';
-const background = '#121212';
+const purple = '#7F3FBF';
+const background = '#000000';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -55,14 +56,26 @@ const QuestsSection = styled.div`
 `;
 
 const QuestItem = styled.div`
-  background: linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(127,63,191,0.08) 100%);
-  border: 2px solid ${gold};
+  background: linear-gradient(135deg, rgba(20,20,20,0.95) 0%, rgba(30,30,30,0.90) 50%, rgba(15,15,15,0.98) 100%);
+  border: 3px solid ${gold};
   border-radius: 18px;
-  box-shadow: 0 2px 16px 0 rgba(255,215,0,0.04), 0 0 16px 0 rgba(127,63,191,0.04);
+  box-shadow: 
+    0 0 12px 0 rgba(255,215,0,0.15),
+    0 0 24px 0 rgba(255,215,0,0.08),
+    inset 0 1px 0 rgba(255,215,0,0.1);
   padding: 1.2rem 1.1rem 1.1rem 1.1rem;
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
+  transition: transform 0.18s cubic-bezier(0.4,0,0.2,1), box-shadow 0.18s;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 0 20px 0 rgba(255,215,0,0.3),
+      0 0 40px 0 rgba(255,215,0,0.15),
+      inset 0 1px 0 rgba(255,215,0,0.2);
+  }
 `;
 
 const QuestItemInfo = styled.div`

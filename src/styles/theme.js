@@ -135,17 +135,17 @@ export const lightTheme = {
   ...darkTheme,
   colors: {
     ...darkTheme.colors,
-    background: '#FAFAFA',     // Drift White
+    background: '#000000',     // Keep black background
     text: {
-      primary: '#000000',      // Echo Black
+      primary: '#000000',      // Black text for white/gray cards
       secondary: '#6C6C6C',    // Smoke Gray
       accent: '#4C1C8C',       // Frequency Purple
     },
     glass: {
-      background: 'rgba(250, 250, 250, 0.15)',
-      border: 'rgba(76, 28, 140, 0.2)',
-      overlay: 'rgba(76, 28, 140, 0.05)',
-      glow: 'rgba(255, 176, 0, 0.2)',
+      background: 'rgba(255, 255, 255, 0.9)',  // White/gray glass cards
+      border: 'rgba(255, 255, 255, 0.3)',      // Light border
+      overlay: 'rgba(255, 255, 255, 0.1)',     // Light overlay
+      glow: 'rgba(255, 176, 0, 0.2)',          // Gold glow
     }
   }
 };

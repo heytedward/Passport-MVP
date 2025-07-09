@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled, { useTheme } from 'styled-components';
 import GlassCard from '../components/GlassCard';
+import RecentActivityModal from '../components/RecentActivityModal';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { createClient } from '@supabase/supabase-js';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -126,6 +129,8 @@ const SectionCard = styled(GlassCard)`
   }
 `;
 
+
+
 const SectionTitle = styled.h2`
   font-family: ${({ theme }) => theme.typography.fontFamily.heading};
   color: ${({ theme }) => theme.colors.text.primary};
@@ -135,48 +140,19 @@ const SectionTitle = styled.h2`
   letter-spacing: 1px;
 `;
 
-const TransactionList = styled.div`
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-`;
 
-const Transaction = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  padding-bottom: 12px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.glass};
-  font-family: ${({ theme }) => theme.typography.fontFamily.body};
-  @media (max-width: 600px) {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-  }
-`;
-
-const TransactionType = styled.div`
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-weight: 600;
-  font-size: 1.1rem;
-`;
-
-const TransactionAmount = styled.div`
-  color: ${({ positive, theme }) => (positive ? theme.colors.secondary : theme.colors.accent)};
-  font-weight: bold;
-  font-size: 1.1rem;
-`;
 
 const TransactionStatus = styled.div`
-  color: #2ecc40;
-  font-size: 1.05rem;
-  font-weight: 600;
+  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
+  color: ${({ theme }) => theme.colors.accent.green};
+  font-size: ${({ theme }) => theme.typography.fontSize.body};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
 `;
 
 const TransactionDate = styled.div`
-  color: #9ca3af;
-  font-size: 1rem;
+  font-family: ${({ theme }) => theme.typography.fontFamily.body};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: ${({ theme }) => theme.typography.fontSize.body};
 `;
 
 const ProgressSection = styled(SectionCard)`
@@ -187,10 +163,11 @@ const ProgressSection = styled(SectionCard)`
 `;
 
 const ProgressBarContainer = styled.div`
-  background: #232323;
-  border-radius: 12px;
-  height: 18px;
-  margin-bottom: 18px;
+  background: ${({ theme }) => theme.colors.glass.background};
+  border: 3px solid ${({ theme }) => theme.colors.accent.gold};
+  border-radius: 20px;
+  height: 24px;
+  margin-bottom: 24px;
   overflow: hidden;
   width: 100%;
   max-width: 700px;
@@ -198,10 +175,10 @@ const ProgressBarContainer = styled.div`
 
 const ProgressBar = styled.div`
   height: 100%;
-  border-radius: 12px;
-  background: ${({ color }) => color};
+  border-radius: 20px;
+  background: ${({ color, theme }) => color || theme.colors.accent.gold};
   width: ${({ value }) => value}%;
-  transition: width 0.5s;
+  transition: width ${({ theme }) => theme.animation.duration.slow};
 `;
 
 const AchievementsRow = styled.div`
@@ -215,13 +192,19 @@ const AchievementIcon = styled.div`
   width: 64px;
   height: 64px;
   background: ${({ theme }) => theme.gradients.primary};
-  border-radius: 16px;
+  border: 3px solid ${({ theme }) => theme.colors.accent.gold};
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 2.2rem;
-  box-shadow: 0 0 16px 0 #7F3FBF55;
+  box-shadow: ${({ theme }) => theme.effects.neonGlow};
+  transition: all ${({ theme }) => theme.animation.duration.normal} ${({ theme }) => theme.animation.timing.smooth};
+  
+  &:hover {
+    transform: translateY(-3px) scale(1.02);
+  }
 `;
 
 const ModalOverlay = styled.div`
@@ -285,7 +268,7 @@ const ModalButton = styled.button`
   transition: background 0.18s, color 0.18s;
   &:hover, &:focus {
     background: ${gold};
-    color: #121212;
+    color: #000000;
     outline: none;
   }
 `;
@@ -322,15 +305,270 @@ const QRContainer = styled.div`
   align-items: center;
   justify-content: center;
   font-size: 2.5rem;
-  color: #121212;
+  color: #000000;
   box-shadow: 0 2px 12px 0 rgba(255,215,0,0.10);
 `;
 
-function ReferralModal({ open, onClose }) {
+const ReferralList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const ReferralItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+`;
+
+const ReferralIcon = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  background: ${({ theme }) => theme.colors.accent.purple};
+`;
+
+const ReferralContent = styled.div`
+  flex: 1;
+`;
+
+const ReferralTitle = styled.div`
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+`;
+
+const ReferralDescription = styled.div`
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.875rem;
+`;
+
+const ReferralMeta = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+`;
+
+const ReferralStatus = styled.div`
+  color: ${({ theme }) => theme.colors.accent.green};
+  font-weight: 600;
+  font-size: 0.875rem;
+`;
+
+const ReferralReward = styled.div`
+  color: ${({ theme }) => theme.colors.accent.gold};
+  font-weight: 600;
+  font-size: 0.875rem;
+`;
+
+const ShareReferralButton = styled.button`
+  background: linear-gradient(135deg, #FFB000 0%, #FF9F1C 100%);
+  border: 3px solid #FFB000;
+  border-radius: 20px;
+  color: #000;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 16px 32px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  margin-top: 24px;
+  width: 100%;
+  max-width: 200px;
+  align-self: center;
+  box-shadow: 
+    0 0 20px 0 rgba(255,176,0,0.2),
+    0 0 40px 0 rgba(255,176,0,0.1);
+  
+  &:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 
+      0 0 30px 0 rgba(255,176,0,0.4),
+      0 0 60px 0 rgba(255,176,0,0.2);
+  }
+  
+  &:active {
+    transform: translateY(-1px) scale(1.01);
+  }
+`;
+
+// Activity item components that match the referral pattern
+const ActivityList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+`;
+
+const ActivityItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  border: 3px solid ${({ theme }) => theme.colors.accent.gold};
+  transition: all ${({ theme }) => theme.animation.duration.normal} ${({ theme }) => theme.animation.timing.smooth};
+  
+  &:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: ${({ theme }) => theme.effects.neonGlow};
+  }
+`;
+
+const ActivityIcon = styled.div`
+  width: 48px;
+  height: 48px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: ${({ $type, theme }) => {
+    switch ($type) {
+      case 'scan': return theme.colors.accent.purple;
+      case 'purchase': return theme.colors.accent.pink;
+      case 'daily': return theme.colors.accent.green;
+      default: return theme.colors.accent.purple;
+    }
+  }};
+`;
+
+const ActivityContent = styled.div`
+  flex: 1;
+`;
+
+const ActivityTitle = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-size: ${({ theme }) => theme.typography.fontSize.body};
+  margin-bottom: 8px;
+`;
+
+const ActivityDescription = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.body};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: ${({ theme }) => theme.typography.fontSize.small};
+`;
+
+const ActivityMeta = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+`;
+
+const ActivityStatus = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
+  color: ${({ theme }) => theme.colors.accent.green};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-size: ${({ theme }) => theme.typography.fontSize.small};
+`;
+
+const ActivityAmount = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
+  color: ${({ $positive, theme }) => 
+    $positive ? theme.colors.accent.gold : theme.colors.accent.pink};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-size: ${({ theme }) => theme.typography.fontSize.small};
+`;
+
+const ActivityDate = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.body};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.75rem;
+`;
+
+const ShareButton = styled(ModalButton)`
+  margin-top: 0.5rem;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+`;
+
+const AdminButton = styled(ModalButton)`
+  background: ${({ theme }) => theme.colors.accent.gold};
+  color: #000;
+  margin-top: 1rem;
+
+  &:hover {
+    background: #FFC72C;
+  }
+`;
+
+const ActionButton = styled.button`
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.background};
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px ${({ theme }) => theme.colors.primary};
+  }
+`;
+
+function ReferralModal({ open, onClose, user }) {
   const [showQR, setShowQR] = useState(true);
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) onClose();
   };
+  
+  // Get user's profile picture or initial
+  const getUserAvatar = () => {
+    if (user?.user_metadata?.avatar_url) {
+      return (
+        <img 
+          src={user.user_metadata.avatar_url} 
+          alt="Profile" 
+          style={{ 
+            width: '100%', 
+            height: '100%', 
+            objectFit: 'cover', 
+            borderRadius: '16px' 
+          }} 
+        />
+      );
+    } else {
+      // Show user's initial in a styled avatar
+      const initial = user?.user_metadata?.username ? 
+        user.user_metadata.username.charAt(0).toUpperCase() : 
+        user?.email ? user.email.charAt(0).toUpperCase() : 'U';
+      
+      return (
+        <div style={{
+          width: '100%',
+          height: '100%',
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, #4C1C8C 0%, #7F3FBF 50%, #9D4EDD 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '2.5rem',
+          color: '#fff',
+          fontWeight: 'bold'
+        }}>
+          {initial}
+        </div>
+      );
+    }
+  };
+  
   return open ? (
     <ModalOverlay onClick={handleOverlayClick}>
       <ModalCard>
@@ -339,8 +577,7 @@ function ReferralModal({ open, onClose }) {
         {showQR && (
           <div style={{ width: '100%', textAlign: 'center', marginTop: '0.2rem' }}>
             <QRContainer>
-              {/* Mock QR code placeholder */}
-              <span role="img" aria-label="QR">#️⃣</span>
+              {getUserAvatar()}
             </QRContainer>
             <div style={{ color: '#FFD700', fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '1.05rem', marginBottom: 8 }}>
               Join me on Monarch Passport!
@@ -358,55 +595,75 @@ function ReferralModal({ open, onClose }) {
   ) : null;
 }
 
-const ReferralStats = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1.2rem;
-`;
-
-const ReferralStat = styled.div`
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 1.02rem;
-  color: #FFD700;
-  font-weight: 500;
-`;
-
-const ReferralProgressBar = styled.div`
-  height: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  overflow: hidden;
-  margin-bottom: 1.1rem;
-  width: 100%;
-  max-width: 400px;
-`;
-
-const ProgressFill = styled.div`
-  height: 100%;
-  width: ${({ progress }) => progress}%;
-  background: linear-gradient(90deg, #FFD700 0%, #FFB000 100%);
-  border-radius: 6px;
-  transition: width 0.3s ease;
-`;
-
-const ShareButton = styled(ModalButton)`
-  margin-top: 0.5rem;
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-`;
-
 function ProfileScreen() {
   const [showReferralModal, setShowReferralModal] = useState(false);
+  const [showActivityModal, setShowActivityModal] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
   const theme = useTheme();
-  // Mock data
-  const profile = {
-    name: 'Ava Papillon',
-    email: 'ava@monarchpassport.com',
-    avatar: '🦋',
-  };
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user) {
+        try {
+          // Fetch user profile from Supabase
+          const supabase = createClient(
+            process.env.REACT_APP_SUPABASE_URL,
+            process.env.REACT_APP_SUPABASE_ANON_KEY
+          );
+          
+          const { data: userProfile, error } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (userProfile) {
+            setProfile({
+              name: userProfile.username || user.user_metadata?.username || user.email?.split('@')[0],
+              email: user.email,
+              avatar: null,
+              joinDate: new Date(user.created_at).toLocaleDateString(),
+              totalWings: userProfile.wings_balance || 0,
+              level: Math.floor((userProfile.wings_balance || 0) / 100) + 1,
+              achievements: 0,
+              items: 0
+            });
+          } else {
+            // Fallback if no profile found
+            setProfile({
+              name: user.user_metadata?.username || user.email?.split('@')[0] || 'User',
+              email: user.email,
+              avatar: null,
+              joinDate: new Date(user.created_at).toLocaleDateString(),
+              totalWings: 0,
+              level: 1,
+              achievements: 0,
+              items: 0
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching profile:', error);
+          // Fallback profile
+          setProfile({
+            name: user.user_metadata?.username || user.email?.split('@')[0] || 'User',
+            email: user.email,
+            avatar: null,
+            joinDate: new Date(user.created_at).toLocaleDateString(),
+            totalWings: 0,
+            level: 1,
+            achievements: 0,
+            items: 0
+          });
+        }
+      }
+      setLoading(false);
+    };
+    fetchProfile();
+  }, [user]);
+
   const balance = 0;
   const transactions = [
     { type: 'Scan Quest Earn', amount: '+15 WNGS', positive: true, status: 'Completed', date: 'Mar 18, 2025' },
@@ -424,54 +681,115 @@ function ProfileScreen() {
     <Container>
       <TopRow>
         <ProfileHeader onClick={() => navigate('/settings')}>
-          <Avatar>AC</Avatar>
-          <ProfileName>Alex Chen</ProfileName>
-          <ProfileEmail>alex@example.com</ProfileEmail>
+          <Avatar>
+            {user?.user_metadata?.username ? user.user_metadata.username.charAt(0).toUpperCase() : 
+             user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
+          </Avatar>
+          <ProfileName>
+            {user?.user_metadata?.username || user?.email?.split('@')[0] || 'User'}
+          </ProfileName>
+          <ProfileEmail>{user?.email || 'Not logged in'}</ProfileEmail>
         </ProfileHeader>
         <BalanceCard>
           <BalanceLabel>WNGS Balance</BalanceLabel>
-          <BalanceValue>1,250</BalanceValue>
+          <BalanceValue>{profile?.totalWings?.toLocaleString() || '0'}</BalanceValue>
         </BalanceCard>
       </TopRow>
 
-      <SectionCard>
+      <SectionCard style={{ display: 'flex', flexDirection: 'column' }}>
         <SectionTitle>Referral Tracker</SectionTitle>
-        <ReferralProgressBar>
-          <ProgressFill progress={33} />
-        </ReferralProgressBar>
-        <ReferralStats>
-          <ReferralStat>3 Friends Invited</ReferralStat>
-          <ReferralStat>Pending: 2 invites</ReferralStat>
-          <ReferralStat>Joined: 1 friend</ReferralStat>
-          <ReferralStat>Rewards Earned: 50 WNGS</ReferralStat>
-        </ReferralStats>
-        <ShareButton onClick={() => setShowReferralModal(true)}>
+        <ReferralList>
+          <ReferralItem>
+            <ReferralIcon>👥</ReferralIcon>
+            <ReferralContent>
+              <ReferralTitle>Friends Invited</ReferralTitle>
+              <ReferralDescription>Shared referral code with friends</ReferralDescription>
+            </ReferralContent>
+            <ReferralMeta>
+              <ReferralStatus>Completed</ReferralStatus>
+              <ReferralReward>+50 WINGS</ReferralReward>
+            </ReferralMeta>
+          </ReferralItem>
+          <ReferralItem>
+            <ReferralIcon>✅</ReferralIcon>
+            <ReferralContent>
+              <ReferralTitle>Friend Joined</ReferralTitle>
+              <ReferralDescription>New user joined via your referral</ReferralDescription>
+            </ReferralContent>
+            <ReferralMeta>
+              <ReferralStatus>Completed</ReferralStatus>
+              <ReferralReward>+25 WINGS</ReferralReward>
+            </ReferralMeta>
+          </ReferralItem>
+        </ReferralList>
+        <ShareReferralButton onClick={() => setShowReferralModal(true)}>
           Share Referral
-        </ShareButton>
+        </ShareReferralButton>
       </SectionCard>
 
-      <SectionCard>
+      <SectionCard as="button" onClick={() => setShowActivityModal(true)} style={{ cursor: 'pointer' }}>
         <SectionTitle>Recent Activity</SectionTitle>
-        <TransactionList>
-          {transactions.map((tx, i) => (
-            <Transaction key={i}>
-              <div>
-                <TransactionType>{tx.type}</TransactionType>
-                <TransactionAmount positive={tx.positive}>{tx.amount}</TransactionAmount>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <TransactionStatus>{tx.status}</TransactionStatus>
-                <TransactionDate>{tx.date}</TransactionDate>
-              </div>
-            </Transaction>
-          ))}
-        </TransactionList>
+        <ActivityList>
+          {transactions.map((tx, i) => {
+            const getActivityType = (type) => {
+              if (type.includes('Scan')) return 'scan';
+              if (type.includes('Purchase')) return 'purchase';
+              if (type.includes('Daily')) return 'daily';
+              return 'scan';
+            };
+            
+            const getActivityIcon = (type) => {
+              if (type.includes('Scan')) return '📱';
+              if (type.includes('Purchase')) return '🛒';
+              if (type.includes('Daily')) return '🎁';
+              return '📱';
+            };
+            
+            return (
+              <ActivityItem key={i}>
+                <ActivityIcon $type={getActivityType(tx.type)}>
+                  {getActivityIcon(tx.type)}
+                </ActivityIcon>
+                <ActivityContent>
+                  <ActivityTitle>{tx.type}</ActivityTitle>
+                  <ActivityDescription>Transaction completed successfully</ActivityDescription>
+                </ActivityContent>
+                <ActivityMeta>
+                  <ActivityStatus>{tx.status}</ActivityStatus>
+                  <ActivityAmount $positive={tx.positive}>{tx.amount}</ActivityAmount>
+                  <ActivityDate>{tx.date}</ActivityDate>
+                </ActivityMeta>
+              </ActivityItem>
+            );
+          })}
+        </ActivityList>
+        <div style={{ 
+          textAlign: 'center', 
+          marginTop: '24px', 
+          color: '#FFD700', 
+          fontSize: '0.9rem',
+          fontWeight: '500'
+        }}>
+          Click to view all activity →
+        </div>
       </SectionCard>
 
       <ReferralModal 
         open={showReferralModal} 
         onClose={() => setShowReferralModal(false)} 
+        user={user}
       />
+
+      <RecentActivityModal 
+        isOpen={showActivityModal} 
+        onClose={() => setShowActivityModal(false)} 
+      />
+
+      {isAdmin && (
+        <AdminButton onClick={() => navigate('/admin')}>
+          Admin Dashboard
+        </AdminButton>
+      )}
     </Container>
   );
 }

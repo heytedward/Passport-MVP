@@ -1,7 +1,7 @@
 import React from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { theme } from '../styles/theme';
+import { darkTheme as theme } from '../styles/theme';
 
 const pulse = keyframes`
   0% { box-shadow: 0 0 0 0 ${theme.colors.accent}55; }

@@ -1,7 +1,8 @@
-import React from 'react';
-import styled, { useTheme } from 'styled-components';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import styled from 'styled-components';
 import { createClient } from '@supabase/supabase-js';
+import { useAuth } from '../hooks/useAuth';
 import GlassCard from '../components/GlassCard';
 import GlowButton from '../components/GlowButton';
 
@@ -12,7 +13,7 @@ const supabase = createClient(
 
 const LoginContainer = styled.div`
   min-height: 100vh;
-  background: ${({ theme }) => theme.colors.background};
+  background: linear-gradient(135deg, #000000 0%, #4C1C8C 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -20,92 +21,313 @@ const LoginContainer = styled.div`
 `;
 
 const LoginCard = styled(GlassCard)`
-  max-width: 400px;
+  max-width: 450px;
   width: 100%;
   text-align: center;
+  padding: 3rem 2.5rem;
 `;
 
 const Title = styled.h1`
-  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
-  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-size: 2rem;
-  margin-bottom: 2rem;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  color: #FFB000;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
 `;
 
-const SocialButton = styled(GlowButton)`
-  width: 100%;
+const Subtitle = styled.p`
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin-bottom: 2.5rem;
+`;
+
+const FormContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+`;
+
+const InputGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+`;
+
+const Label = styled.label`
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  font-weight: 500;
+`;
+
+const Input = styled.input`
+  padding: 12px 16px;
+  border: 3px solid rgba(255, 215, 0, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 0 8px 0 rgba(255,215,0,0.1),
+    0 0 16px 0 rgba(255,215,0,0.05),
+    inset 0 1px 0 rgba(255,215,0,0.05);
+  
+  &:focus {
+    outline: none;
+    border: 3px solid #FFD700;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 
+      0 0 16px 0 rgba(255,215,0,0.25),
+      0 0 32px 0 rgba(255,215,0,0.12),
+      inset 0 1px 0 rgba(255,215,0,0.15);
+  }
+  
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+  }
+`;
+
+const ToggleButton = styled.button`
+  background: none;
+  border: none;
+  color: #FFB000;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: underline;
+  margin-top: 1rem;
+  
+  &:hover {
+    color: #FFC533;
+  }
+`;
+
+const ErrorMessage = styled.div`
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+  color: #e74c3c;
+  font-size: 0.9rem;
   margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  
-  img {
-    width: 24px;
-    height: 24px;
-  }
 `;
 
-const Divider = styled.div`
-  display: flex;
-  align-items: center;
-  margin: 2rem 0;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  
-  &::before,
-  &::after {
-    content: '';
-    flex: 1;
-    border-bottom: 1px solid ${({ theme }) => theme.colors.glass};
-  }
-  
-  span {
-    padding: 0 1rem;
-    font-family: ${({ theme }) => theme.typography.fontFamily.body};
-  }
+const SuccessMessage = styled.div`
+  background: rgba(46, 204, 113, 0.1);
+  border: 1px solid rgba(46, 204, 113, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+  color: #2ecc71;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
 `;
 
 const LoginScreen = () => {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    confirmPassword: '',
+    username: ''
+  });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSocialLogin = async (provider) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !loading) {
+      navigate('/');
+    }
+  }, [user, loading, navigate]);
+
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+    setError('');
+    setSuccess('');
+  };
+
+  const validateForm = () => {
+    if (!formData.email || !formData.password) {
+      setError('Email and password are required');
+      return false;
+    }
+    
+    if (isSignUp) {
+      if (!formData.username) {
+        setError('Username is required');
+        return false;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match');
+        return false;
+      }
+      if (formData.password.length < 6) {
+        setError('Password must be at least 6 characters');
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
+  const handleLogin = async () => {
+    if (!validateForm()) return;
+    
+    setIsLoading(true);
+    setError('');
+    
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/home`
-        }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
       });
-      
+
       if (error) throw error;
+      
+      setSuccess('Login successful! Redirecting...');
+      setTimeout(() => navigate('/'), 1000);
+      
     } catch (error) {
-      console.error('Error logging in:', error.message);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  const handleSignUp = async () => {
+    if (!validateForm()) return;
+    
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            username: formData.username,
+            full_name: formData.username
+          }
+        }
+      });
+
+      if (error) throw error;
+      
+      if (data.user && !data.user.email_confirmed_at) {
+        setSuccess('Account created! Please check your email to confirm your account.');
+      } else {
+        setSuccess('Account created successfully! Redirecting...');
+        setTimeout(() => navigate('/'), 1000);
+      }
+      
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (isSignUp) {
+      handleSignUp();
+    } else {
+      handleLogin();
+    }
+  };
+
+  if (loading) {
+    return (
+      <LoginContainer>
+        <LoginCard>
+          <Title>Loading...</Title>
+        </LoginCard>
+      </LoginContainer>
+    );
+  }
 
   return (
     <LoginContainer>
       <LoginCard>
-        <Title>Welcome Back</Title>
-        
-        <SocialButton onClick={() => handleSocialLogin('google')}>
-          <img src="/google-icon.svg" alt="Google" />
-          Continue with Google
-        </SocialButton>
-        
-        <SocialButton onClick={() => handleSocialLogin('twitter')}>
-          <img src="/twitter-icon.svg" alt="Twitter" />
-          Continue with X
-        </SocialButton>
-        
-        <Divider>
-          <span>or</span>
-        </Divider>
-        
-        <GlowButton variant="accent" onClick={() => navigate('/')}>
-          Back to Home
-        </GlowButton>
+        <Title>🦋 Monarch</Title>
+        <Subtitle>
+          {isSignUp ? 'Create your account to start collecting' : 'Welcome back to your digital passport'}
+        </Subtitle>
+
+        {error && <ErrorMessage>{error}</ErrorMessage>}
+        {success && <SuccessMessage>{success}</SuccessMessage>}
+
+        <form onSubmit={handleSubmit}>
+          <FormContainer>
+            {isSignUp && (
+              <InputGroup>
+                <Label>Username</Label>
+                <Input
+                  type="text"
+                  name="username"
+                  placeholder="Enter your username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                />
+              </InputGroup>
+            )}
+            
+            <InputGroup>
+              <Label>Email</Label>
+              <Input
+                type="email"
+                name="email"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={handleInputChange}
+              />
+            </InputGroup>
+            
+            <InputGroup>
+              <Label>Password</Label>
+              <Input
+                type="password"
+                name="password"
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={handleInputChange}
+              />
+            </InputGroup>
+            
+            {isSignUp && (
+              <InputGroup>
+                <Label>Confirm Password</Label>
+                <Input
+                  type="password"
+                  name="confirmPassword"
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                />
+              </InputGroup>
+            )}
+            
+            <GlowButton
+              type="submit"
+              disabled={isLoading}
+              style={{ width: '100%', marginTop: '1rem' }}
+            >
+              {isLoading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Sign In')}
+            </GlowButton>
+          </FormContainer>
+        </form>
+
+        <ToggleButton onClick={() => setIsSignUp(!isSignUp)}>
+          {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+        </ToggleButton>
       </LoginCard>
     </LoginContainer>
   );

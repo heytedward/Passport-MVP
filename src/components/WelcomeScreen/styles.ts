@@ -5,11 +5,11 @@ export const GlobalStyle = createGlobalStyle`
   
   :root {
     /* Brand Colors */
-    --frequency-purple: #622CC6;
-    --solar-gold: #F44019;
-    --echo-black: #121212;
-    --smoke-gray: #9E9E9E;
-    --drift-white: #FFFFFF;
+    --frequency-purple: #4C1C8C;
+    --solar-gold: #FFB000;
+    --echo-black: #000000;
+    --smoke-gray: #6C6C6C;
+    --drift-white: #FAFAFA;
 
     /* Gradients */
     --frequency-pulse: linear-gradient(135deg, var(--frequency-purple) 0%, #9D4EDD 100%);

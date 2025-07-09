@@ -1,8 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled, { useTheme } from 'styled-components';
 import GlassCard from '../components/GlassCard';
 import { createClient } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { useThemes } from '../hooks/useThemes';
 import { gradientThemes } from '../styles/theme';
 
 const Container = styled.div`
@@ -25,7 +27,11 @@ const AccordionSection = styled(GlassCard)`
   margin-bottom: 24px;
   border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 0 32px 0 ${({ theme }) => theme.colors.accent}22;
+  border: 3px solid ${({ theme }) => theme.colors?.accent?.gold || '#FFD700'};
+  box-shadow: 
+    0 0 20px 0 rgba(255,215,0,0.2),
+    0 0 40px 0 rgba(255,215,0,0.1),
+    inset 0 1px 0 rgba(255,215,0,0.15);
 `;
 
 const AccordionHeader = styled.button`
@@ -154,21 +160,30 @@ const GradientSwatch = styled.button`
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  border: 2.5px solid transparent;
+  border: 3px solid transparent;
   background: ${({ gradient }) => gradient};
-  box-shadow: 0 0 16px 0 rgba(255,215,0,0.10), 0 0 8px 0 rgba(127,63,191,0.10);
+  box-shadow: 
+    0 0 12px 0 rgba(255,215,0,0.15),
+    0 0 24px 0 rgba(255,215,0,0.08),
+    inset 0 1px 0 rgba(255,215,0,0.1);
   cursor: pointer;
   outline: none;
   transition: border 0.2s, box-shadow 0.2s, transform 0.15s;
   position: relative;
   &:hover, &:focus {
     border-color: ${({ theme }) => theme.colors.highlight};
-    box-shadow: 0 0 24px 0 rgba(255,215,0,0.18);
     transform: scale(1.06);
+    box-shadow: 
+      0 0 20px 0 rgba(255,215,0,0.3),
+      0 0 40px 0 rgba(255,215,0,0.15),
+      inset 0 1px 0 rgba(255,215,0,0.2);
   }
   ${({ selected, theme }) => selected && `
     border-color: ${theme.colors.highlight};
-    box-shadow: 0 0 32px 0 rgba(255,215,0,0.22);
+    box-shadow: 
+      0 0 24px 0 rgba(255,215,0,0.4),
+      0 0 48px 0 rgba(255,215,0,0.2),
+      inset 0 1px 0 rgba(255,215,0,0.3);
     &::after {
       content: '';
       position: absolute;
@@ -194,31 +209,87 @@ const supabase = createClient(
   process.env.REACT_APP_SUPABASE_ANON_KEY
 );
 
-const SettingsScreen = ({ themeMode, onToggleTheme, gradientKey, onGradientChange }) => {
+const SettingsScreen = ({ themeMode = 'dark', onToggleTheme = () => {}, gradientKey = 'monarch', onGradientChange = () => {} }) => {
+  const { user, signOut } = useAuth();
+  const { ownedThemes, equippedTheme, equipTheme, checkThemeOwnership } = useThemes();
   const [open, setOpen] = useState('account');
-  const [displayName, setDisplayName] = useState('Ava Papillon');
+  const [displayName, setDisplayName] = useState('');
   const [emailPref, setEmailPref] = useState(true);
+
+  // Update display name and avatar when user changes
+  useEffect(() => {
+    if (user) {
+      setDisplayName(user.user_metadata?.username || user.email?.split('@')[0] || 'User');
+      loadUserProfile();
+    }
+  }, [user]);
+
+  const loadUserProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('avatar_url, display_name')
+        .eq('id', user.id)
+        .single();
+
+      if (profile) {
+        if (profile.avatar_url) setAvatar(profile.avatar_url);
+        if (profile.display_name) setDisplayName(profile.display_name);
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    }
+  };
   const [avatar, setAvatar] = useState(null);
   const fileInputRef = useRef();
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  React.useEffect(() => {
-    const session = supabase.auth.getSession ? supabase.auth.getSession() : null;
-    if (session && session.user) setIsLoggedIn(true);
-    else setIsLoggedIn(false);
-  }, []);
-
-  const handleAvatarChange = e => {
+  const handleAvatarChange = async (e) => {
     if (e.target.files && e.target.files[0]) {
-      setAvatar(URL.createObjectURL(e.target.files[0]));
+      const file = e.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      try {
+        // Upload to Supabase storage
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+
+        // Update user profile
+        const { error: updateError } = await supabase
+          .from('user_profiles')
+          .update({ avatar_url: data.publicUrl })
+          .eq('id', user.id);
+
+        if (updateError) throw updateError;
+
+        setAvatar(data.publicUrl);
+      } catch (error) {
+        console.error('Error uploading avatar:', error);
+        // Fallback to local preview
+        setAvatar(URL.createObjectURL(file));
+      }
     }
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setIsLoggedIn(false);
-    window.location.href = 'https://papillonbrand.us';
+    try {
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const handleLogin = () => {
@@ -268,7 +339,7 @@ const SettingsScreen = ({ themeMode, onToggleTheme, gradientKey, onGradientChang
               </SettingRow>
               <SettingRow>
                 <Label>Email</Label>
-                <span>ava@monarchpassport.com</span>
+                <span>{user?.email || 'Not logged in'}</span>
               </SettingRow>
               <SettingRow>
                 <Label htmlFor="emailPref">Email Preferences</Label>
@@ -289,12 +360,26 @@ const SettingsScreen = ({ themeMode, onToggleTheme, gradientKey, onGradientChang
                   <SocialIcon src="/apple-icon.svg" alt="Apple" title="Apple" />
                 </SocialAccounts>
               </SettingRow>
-              <Button
-                style={{ marginTop: 12, width: '100%' }}
-                onClick={isLoggedIn ? handleLogout : handleLogin}
-              >
-                {isLoggedIn ? 'Logout' : 'Login'}
-              </Button>
+              {user ? (
+                <div>
+                  <div style={{ marginBottom: '1rem', color: '#fff', fontSize: '0.9rem' }}>
+                    <strong>Logged in as:</strong> {user.email}
+                  </div>
+                  <Button
+                    style={{ marginTop: 12, width: '100%', background: 'rgba(231, 76, 60, 0.2)', borderColor: 'rgba(231, 76, 60, 0.3)' }}
+                    onClick={handleLogout}
+                  >
+                    Sign Out
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  style={{ marginTop: 12, width: '100%' }}
+                  onClick={handleLogin}
+                >
+                  Sign In
+                </Button>
+              )}
             </AccordionContent>
           )}
         </AccordionSection>
@@ -316,26 +401,7 @@ const SettingsScreen = ({ themeMode, onToggleTheme, gradientKey, onGradientChang
                   onChange={onToggleTheme}
                 />
               </SettingRow>
-              <SettingRow>
-                <Label>Passport Theme</Label>
-                <GradientSwatchRow>
-                  {Object.entries(gradientThemes).map(([key, { name, gradient }]) => (
-                    <div key={key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <GradientSwatch
-                        type="button"
-                        gradient={gradient}
-                        selected={gradientKey === key}
-                        aria-label={name}
-                        onClick={() => onGradientChange(key)}
-                      />
-                      <SwatchLabel>{name.split(' ')[0]}</SwatchLabel>
-                    </div>
-                  ))}
-                </GradientSwatchRow>
-                <div style={{ fontSize: '0.85rem', color: '#aaa', marginTop: 2, marginBottom: 8 }}>
-                  This only affects the Passport screen.
-                </div>
-              </SettingRow>
+
             </AccordionContent>
           )}
         </AccordionSection>
