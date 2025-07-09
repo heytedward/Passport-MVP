@@ -80,7 +80,9 @@ const ModalOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(18, 18, 18, 0.3);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -100,21 +102,27 @@ const Card = styled.div`
   width: 100%;
   height: 100%;
   border-radius: 20px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.18) 0%, rgba(76,28,140,0.13) 100%), 
-              rgba(76, 28, 140, 0.15);
-  border: 1.5px solid rgba(255,255,255,0.35);
-  box-shadow: 0 0 32px 0 rgba(255,215,0,0.18), 0 0 24px 0 rgba(127,63,191,0.22);
+  background: linear-gradient(135deg, rgba(20,20,20,0.95) 0%, rgba(30,30,30,0.90) 50%, rgba(15,15,15,0.98) 100%);
+  border: 3px solid #FFD700;
+  box-shadow: 
+    0 0 20px 0 rgba(255,215,0,0.3),
+    0 0 40px 0 rgba(255,215,0,0.15),
+    inset 0 1px 0 rgba(255,215,0,0.2);
   backdrop-filter: blur(20px);
   color: white;
   padding: 40px 30px;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
   position: relative;
   
   &:hover {
     transform: scale(1.02);
+    box-shadow: 
+      0 0 28px 0 rgba(255,215,0,0.4),
+      0 0 56px 0 rgba(255,215,0,0.2),
+      inset 0 1px 0 rgba(255,215,0,0.3);
   }
 `;
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import GlassCard from './GlassCard';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -7,163 +8,311 @@ const ModalOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(18, 18, 18, 0.75);
-  backdrop-filter: blur(16px);
+  background: rgba(18, 18, 18, 0.8);
+  backdrop-filter: blur(20px);
   z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: fadeIn 0.3s;
+  animation: fadeIn 0.3s ease;
+  padding: 1rem;
+  
+  /* Ensure the overlay is clickable */
+  pointer-events: auto;
+  
   @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
   }
 `;
 
-const ModalCard = styled.div`
-  background: linear-gradient(135deg, rgba(30,30,30,0.95) 0%, rgba(127,63,191,0.13) 100%);
-  border: 2.5px solid #FFD700;
-  border-radius: 22px;
-  box-shadow: 0 8px 40px 0 rgba(255,215,0,0.10), 0 0 32px 0 rgba(127,63,191,0.10);
-  padding: 2.2rem 1.5rem 1.5rem 1.5rem;
+const ModalCard = styled(GlassCard)`
+  max-width: 500px;
   width: 100%;
-  max-width: 350px;
-  position: relative;
+  max-height: 80vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  @media (max-width: 500px) {
-    min-width: 0;
-    padding: 1.2rem 0.7rem 1.2rem 0.7rem;
-  }
+  position: relative;
+  pointer-events: auto;
+`;
+
+const ModalHeader = styled.div`
+  padding: 32px 32px 24px 32px;
+  border-bottom: 3px solid ${({ theme }) => theme.colors.accent.gold};
 `;
 
 const ModalTitle = styled.h2`
-  font-family: 'Outfit', sans-serif;
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: #fff;
-  margin-bottom: 0.7rem;
-  text-align: center;
+  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 0 0 24px 0;
+  font-size: ${({ theme }) => theme.typography.fontSize.h2};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
 `;
 
-const ModalQuestion = styled.div`
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 1.08rem;
-  color: #FFD700;
-  margin-bottom: 1.5rem;
-  text-align: center;
+const ModalBody = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px 32px 32px;
 `;
 
-const ModalButton = styled.button`
-  width: 100%;
-  max-width: 320px;
-  margin-bottom: 1rem;
-  padding: 0.85rem 0;
-  border-radius: 12px;
-  border: 2px solid #FFD700;
-  background: transparent;
-  color: #fff;
-  font-family: 'Outfit', sans-serif;
-  font-size: 1.08rem;
-  font-weight: 600;
+const QuestContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+`;
+
+const QuestCard = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  border: 3px solid ${({ theme }) => theme.colors.accent.gold};
+  transition: all ${({ theme }) => theme.animation.duration.normal} ${({ theme }) => theme.animation.timing.smooth};
   cursor: pointer;
-  transition: background 0.18s, color 0.18s;
-  &:hover, &:focus {
-    background: #FFD700;
-    color: #121212;
-    outline: none;
+  
+  &:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: ${({ theme }) => theme.effects.neonGlow};
   }
 `;
 
-const ModalClose = styled.button`
+const QuestIcon = styled.div`
+  width: 48px;
+  height: 48px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: ${({ platform, theme }) => 
+    platform === 'twitter' ? theme.colors.accent.cyan : theme.colors.accent.pink};
+`;
+
+const QuestContent = styled.div`
+  flex: 1;
+`;
+
+const QuestTitle = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
+  color: ${({ theme }) => theme.colors.text.primary};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-size: ${({ theme }) => theme.typography.fontSize.body};
+  margin-bottom: 8px;
+`;
+
+const QuestDescription = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.body};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: ${({ theme }) => theme.typography.fontSize.small};
+`;
+
+const QuestMeta = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+`;
+
+const QuestStatus = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
+  color: ${({ $completed, theme }) => 
+    $completed ? theme.colors.accent.green : theme.colors.text.secondary};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-size: ${({ theme }) => theme.typography.fontSize.small};
+`;
+
+const QuestDate = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.body};
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.75rem;
+`;
+
+const QuestReward = styled.div`
+  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
+  color: ${({ theme }) => theme.colors.accent.gold};
+  font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+  font-size: ${({ theme }) => theme.typography.fontSize.small};
+`;
+
+const CloseButton = styled.button`
   position: absolute;
-  top: 18px;
-  right: 18px;
-  background: none;
-  border: none;
-  color: #fff;
+  top: 24px;
+  right: 24px;
+  background: transparent;
+  border: 3px solid ${({ theme }) => theme.colors.accent.gold};
+  color: ${({ theme }) => theme.colors.text.primary};
   font-size: 1.5rem;
   cursor: pointer;
   z-index: 10;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  padding: 0;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
+  border-radius: 20px;
+  transition: all ${({ theme }) => theme.animation.duration.normal} ${({ theme }) => theme.animation.timing.smooth};
+  
   &:hover {
-    background: rgba(255,255,255,0.08);
+    transform: translateY(-3px) scale(1.02);
+    background: ${({ theme }) => theme.colors.accent.gold};
+    color: ${({ theme }) => theme.colors.background};
+    box-shadow: ${({ theme }) => theme.effects.neonGlow};
+  }
+  
+  &:focus {
+    outline: none;
+    transform: translateY(-3px) scale(1.02);
+    background: ${({ theme }) => theme.colors.accent.gold};
+    color: ${({ theme }) => theme.colors.background};
   }
 `;
 
-const QRContainer = styled.div`
-  width: 120px;
-  height: 120px;
-  background: #fff;
-  border-radius: 16px;
-  margin: 0 auto 1rem auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2.5rem;
-  color: #121212;
-  box-shadow: 0 2px 12px 0 rgba(255,215,0,0.10);
+const CompleteLaterButton = styled.button`
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 1rem;
+  width: 100%;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
 `;
 
-function DailiesModal({ open, onClose }) {
-  const [showQR, setShowQR] = useState(false);
-  
+const CompletionMessage = styled.div`
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 12px;
+  text-align: center;
+  color: #22C55E;
+`;
+
+const DailiesModal = ({ isOpen, onClose }) => {
+  const [completedQuests, setCompletedQuests] = useState(new Set());
+
+  if (!isOpen) return null;
+
   const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) onClose();
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
   };
 
-  const handleTweet = () => {
-    window.open('https://twitter.com/intent/tweet?text=Good%20morning%20@PapillonBrandUs!&hashtags=Papillon', '_blank');
+  const handleTwitterQuest = () => {
+    // Pre-compose tweet with GM message
+    const tweetText = encodeURIComponent("GM @PapillonBrandUs 🦋 #PapillonBrand #PapillonMorning #GM");
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
+    
+    // Open Twitter in new tab
+    window.open(twitterUrl, '_blank');
+    
+    // Mark as completed (in real app, you'd verify this server-side)
+    setCompletedQuests(prev => new Set([...prev, 'twitter']));
+    
+    // Award WINGS (would call your backend API)
+    // awardWings(userId, 10, 'twitter_gm', 'Daily Twitter GM quest');
   };
 
-  const handleShareQR = () => {
-    setShowQR(true);
+  const handleInstagramQuest = () => {
+    // Open Instagram to Papillon brand page
+    const instagramUrl = 'https://instagram.com/papillonbrand.us';
+    window.open(instagramUrl, '_blank');
+    
+    // Mark as completed
+    setCompletedQuests(prev => new Set([...prev, 'instagram']));
+    
+    // Award WINGS
+    // awardWings(userId, 15, 'instagram_engagement', 'Daily Instagram engagement quest');
   };
 
-  if (!open) return null;
+  const quests = [
+    {
+      id: 'twitter',
+      platform: 'twitter',
+      icon: '🐦',
+      title: 'Say GM on Twitter/X',
+      description: 'Tweet "GM @PapillonBrandUs" to start your day',
+      reward: '+10 WINGS',
+      action: handleTwitterQuest,
+      completed: completedQuests.has('twitter'),
+      date: completedQuests.has('twitter') ? 'Mar 18, 2025' : ''
+    },
+    {
+      id: 'instagram',
+      platform: 'instagram', 
+      icon: '📸',
+      title: 'Engage on Instagram',
+      description: 'Like, comment, or share our latest post',
+      reward: '+15 WINGS',
+      action: handleInstagramQuest,
+      completed: completedQuests.has('instagram'),
+      date: completedQuests.has('instagram') ? 'Mar 17, 2025' : ''
+    }
+  ];
+
+  const allCompleted = quests.every(quest => quest.completed);
+  const totalWings = quests.reduce((sum, quest) => {
+    return quest.completed ? sum + parseInt(quest.reward.match(/\d+/)[0]) : sum;
+  }, 0);
 
   return (
     <ModalOverlay onClick={handleOverlayClick}>
-      <ModalCard>
-        <ModalClose onClick={onClose}>×</ModalClose>
-        <ModalTitle>Daily Check-in</ModalTitle>
-        <ModalQuestion>Have you said Good Morning to us?</ModalQuestion>
+      <ModalCard onClick={e => e.stopPropagation()}>
+        <CloseButton onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}>×</CloseButton>
         
-        {!showQR ? (
-          <>
-            <ModalButton onClick={handleTweet}>
-              Tweet @PapillonBrandUs
-            </ModalButton>
-            <ModalButton onClick={handleShareQR}>
-              Share Referral QR
-            </ModalButton>
-          </>
-        ) : (
-          <div style={{ width: '100%', textAlign: 'center' }}>
-            <QRContainer>
-              {/* Mock QR code placeholder */}
-              <span role="img" aria-label="QR">#️⃣</span>
-            </QRContainer>
-            <div style={{ color: '#FFD700', fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '1.05rem', marginBottom: 8 }}>
-              Join me on Monarch Passport!
-            </div>
-            <ModalButton
-              onClick={() => window.open('https://www.instagram.com/', '_blank')}
-            >
-              Share to Instagram Story
-            </ModalButton>
-          </div>
-        )}
+        <ModalHeader>
+          <ModalTitle>Daily Social Quests</ModalTitle>
+        </ModalHeader>
+
+        <ModalBody>
+          <QuestContainer>
+            {quests.map(quest => (
+              <QuestCard 
+                key={quest.id}
+                onClick={quest.completed ? null : quest.action}
+                style={{
+                  cursor: quest.completed ? 'default' : 'pointer'
+                }}
+              >
+                <QuestIcon platform={quest.platform}>
+                  {quest.icon}
+                </QuestIcon>
+                <QuestContent>
+                  <QuestTitle>{quest.title}</QuestTitle>
+                  <QuestDescription>{quest.description}</QuestDescription>
+                </QuestContent>
+                <QuestMeta>
+                  <QuestStatus $completed={quest.completed}>
+                    {quest.completed ? 'Completed' : 'Available'}
+                  </QuestStatus>
+                  {quest.date && <QuestDate>{quest.date}</QuestDate>}
+                  {quest.completed && (
+                    <QuestReward>{quest.reward}</QuestReward>
+                  )}
+                </QuestMeta>
+              </QuestCard>
+            ))}
+          </QuestContainer>
+        </ModalBody>
       </ModalCard>
     </ModalOverlay>
   );
-}
+};
 
 export default DailiesModal; 

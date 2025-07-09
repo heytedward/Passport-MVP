@@ -1,126 +1,102 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { createGlobalStyle, ThemeProvider } from 'styled-components';
-import { darkTheme, lightTheme, gradientThemes } from './styles/theme';
-import ScanScreen from './screens/ScanScreen';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import styled, { ThemeProvider } from 'styled-components';
+import { motion, AnimatePresence } from 'framer-motion';
+
+import { darkTheme, lightTheme } from './styles/theme';
+import GlobalStyle from './styles/GlobalStyle';
+
+import { useAuth, AuthProvider } from './hooks/useAuth';
+import ProtectedRoute from './components/ProtectedRoute';
+
 import WelcomeScreen from './screens/WelcomeScreen';
-import LoginScreen from './screens/LoginScreen';
-import PassportScreen from './screens/PassportScreen';
-import ProfileScreen from './screens/ProfileScreen';
-import ResponsiveNavBar from './components/NavBar';
-import styled from 'styled-components';
-import SettingsScreen from './screens/SettingsScreen';
 import HomeScreen from './screens/HomeScreen';
+import PassportScreen from './screens/PassportScreen';
+import ScanScreen from './screens/ScanScreen';
 import ClosetScreen from './screens/ClosetScreen';
+import ProfileScreen from './screens/ProfileScreen';
+import SettingsScreen from './screens/SettingsScreen';
 import QuestsScreen from './screens/QuestsScreen';
+import LoginScreen from './screens/LoginScreen';
+import AdminScreen from './screens/AdminScreen';
 
-const GlobalStyle = createGlobalStyle`
-  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
-  
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  
-  body {
-    font-family: ${({ theme }) => theme.typography.fontFamily.body};
-    font-size: ${({ theme }) => theme.typography.fontSize.body};
-    line-height: ${({ theme }) => theme.typography.lineHeight.body};
-    background: ${({ theme }) => theme.colors.background};
-    color: ${({ theme }) => theme.colors.text.primary};
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: ${({ theme }) => theme.typography.fontFamily.heading};
-    line-height: ${({ theme }) => theme.typography.lineHeight.heading};
-  }
-
-  h1 { font-size: ${({ theme }) => theme.typography.fontSize.h1}; }
-  h2 { font-size: ${({ theme }) => theme.typography.fontSize.h2}; }
-  h3 { font-size: ${({ theme }) => theme.typography.fontSize.h3}; }
-
-  code, pre {
-    font-family: ${({ theme }) => theme.typography.fontFamily.mono};
-    font-size: ${({ theme }) => theme.typography.fontSize.code};
-    line-height: ${({ theme }) => theme.typography.lineHeight.code};
-  }
-  
-  button {
-    font-family: inherit;
-  }
-
-  /* Focus styles */
-  :focus {
-    outline: 2px solid ${({ theme }) => theme.colors.highlight};
-    outline-offset: 2px;
-  }
-
-  /* High contrast mode support */
-  @media (prefers-contrast: high) {
-    .glass-card {
-      background: rgba(76, 28, 140, 0.3);
-      border-width: 2px;
-    }
-  }
-
-  /* Reduced motion */
-  @media (prefers-reduced-motion: reduce) {
-    * {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
-    }
-  }
-`;
+import NavBar from './components/NavBar';
+import FloatingScanButton from './components/FloatingScanButton';
 
 const AppContainer = styled.div`
+  background-color: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
   min-height: 100vh;
-  padding-bottom: 100px; /* Space for nav bar */
+  position: relative;
 `;
 
-const App = () => {
-  const [themeMode, setThemeMode] = React.useState('dark');
-  const [gradientKey, setGradientKey] = React.useState(() => {
-    return localStorage.getItem('papillon-gradient') || 'frequencyPulse';
+const pageVariants = {
+  initial: {
+    opacity: 0,
+    x: "-100vw",
+    scale: 0.8
+  },
+  in: {
+    opacity: 1,
+    x: 0,
+    scale: 1
+  },
+  out: {
+    opacity: 0,
+    x: "100vw",
+    scale: 1.2
+  }
+};
+
+const pageTransition = {
+  type: "tween",
+  ease: "anticipate",
+  duration: 0.5
+};
+
+function App() {
+  const location = useLocation();
+  const [themeMode, setThemeMode] = useState(() => {
+    const savedTheme = localStorage.getItem('themeMode');
+    return savedTheme || 'dark';
   });
 
-  const handleToggleTheme = () => setThemeMode(mode => (mode === 'dark' ? 'light' : 'dark'));
-  const handleGradientChange = key => {
-    setGradientKey(key);
-    localStorage.setItem('papillon-gradient', key);
+  useEffect(() => {
+    localStorage.setItem('themeMode', themeMode);
+  }, [themeMode]);
+
+  const toggleTheme = () => {
+    setThemeMode(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  // Inject the selected gradient into the theme
-  const theme = {
-    ...(themeMode === 'dark' ? darkTheme : lightTheme),
-    currentGradient: gradientThemes[gradientKey].gradient,
-  };
+  const currentTheme = themeMode === 'dark' ? darkTheme : lightTheme;
 
   return (
-    <ThemeProvider theme={theme}>
-      <GlobalStyle />
-      <Router>
+    <AuthProvider>
+      <ThemeProvider theme={currentTheme}>
+        <GlobalStyle />
         <AppContainer>
-          <Routes>
-            <Route path="/" element={<HomeScreen />} />
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
+            <Route path="/*" element={<HomeScreen />} />
             <Route path="/passport" element={<PassportScreen />} />
             <Route path="/scan" element={<ScanScreen />} />
             <Route path="/closet" element={<ClosetScreen />} />
             <Route path="/profile" element={<ProfileScreen />} />
-            <Route path="/welcome" element={<WelcomeScreen />} />
-            <Route path="/login" element={<LoginScreen />} />
-            <Route path="/settings" element={<SettingsScreen themeMode={themeMode} onToggleTheme={handleToggleTheme} gradientKey={gradientKey} onGradientChange={handleGradientChange} />} />
+            <Route path="/settings" element={<SettingsScreen themeMode={themeMode} onToggleTheme={toggleTheme} />} />
             <Route path="/quests" element={<QuestsScreen />} />
+            <Route path="/login" element={<LoginScreen />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/admin" element={<AdminScreen />} />
+            </Route>
           </Routes>
-          <ResponsiveNavBar />
-        </AppContainer>
-      </Router>
+        </AnimatePresence>
+        
+        <NavBar />
+      </AppContainer>
     </ThemeProvider>
+    </AuthProvider>
   );
-};
+}
 
 export default App;

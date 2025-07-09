@@ -3,11 +3,11 @@ import styled, { keyframes } from 'styled-components';
 
 // Color palette
 const colors = {
-  frequencyPurple: '#622CC6',
-  solarGold: '#F44019',
-  echoBlack: '#121212',
-  smokeGray: '#9E9E9E',
-  driftWhite: '#FFFFFF',
+  frequencyPurple: '#4C1C8C',
+  solarGold: '#FFB000',
+  echoBlack: '#000000',
+  smokeGray: '#6C6C6C',
+  driftWhite: '#FAFAFA',
 };
 
 // Gradient definitions
@@ -69,7 +69,7 @@ const Button = styled.button<{ variant: 'primary' | 'secondary' | 'google' | 'ap
   min-height: 44px;
   padding: 0.75rem 1.5rem;
   border-radius: 12px;
-  border: none;
+  border: 3px solid transparent;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -78,6 +78,10 @@ const Button = styled.button<{ variant: 'primary' | 'secondary' | 'google' | 'ap
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  box-shadow: 
+    0 0 8px 0 rgba(255,215,0,0.1),
+    0 0 16px 0 rgba(255,215,0,0.05),
+    inset 0 1px 0 rgba(255,215,0,0.05);
 
   ${({ variant }) => {
     switch (variant) {
@@ -85,33 +89,57 @@ const Button = styled.button<{ variant: 'primary' | 'secondary' | 'google' | 'ap
         return `
           background: ${colors.frequencyPurple};
           color: ${colors.driftWhite};
+          border-color: ${colors.solarGold};
           &:hover {
             background: ${gradients.frequencyPulse};
+            transform: translateY(-2px);
+            box-shadow: 
+              0 0 16px 0 rgba(255,215,0,0.25),
+              0 0 32px 0 rgba(255,215,0,0.12),
+              inset 0 1px 0 rgba(255,215,0,0.15);
           }
         `;
       case 'secondary':
         return `
           background: ${gradients.solarShine};
           color: ${colors.driftWhite};
+          border-color: ${colors.solarGold};
           &:hover {
             transform: translateY(-2px);
+            box-shadow: 
+              0 0 16px 0 rgba(255,215,0,0.25),
+              0 0 32px 0 rgba(255,215,0,0.12),
+              inset 0 1px 0 rgba(255,215,0,0.15);
           }
         `;
       case 'google':
         return `
           background: ${colors.driftWhite};
           color: ${colors.echoBlack};
-          border: 1px solid ${colors.smokeGray};
+          border-color: ${colors.smokeGray};
           &:hover {
             background: ${colors.smokeGray}10;
+            border-color: ${colors.solarGold};
+            transform: translateY(-2px);
+            box-shadow: 
+              0 0 12px 0 rgba(255,215,0,0.15),
+              0 0 24px 0 rgba(255,215,0,0.08),
+              inset 0 1px 0 rgba(255,215,0,0.1);
           }
         `;
       case 'apple':
         return `
           background: ${colors.echoBlack};
           color: ${colors.driftWhite};
+          border-color: ${colors.smokeGray};
           &:hover {
             background: ${gradients.nightScan};
+            border-color: ${colors.solarGold};
+            transform: translateY(-2px);
+            box-shadow: 
+              0 0 12px 0 rgba(255,215,0,0.15),
+              0 0 24px 0 rgba(255,215,0,0.08),
+              inset 0 1px 0 rgba(255,215,0,0.1);
           }
         `;
     }
@@ -126,8 +154,21 @@ const DeviceSyncSection = styled.div`
   text-align: center;
   color: ${colors.smokeGray};
   margin-top: 2rem;
-  border: 1px solid ${colors.smokeGray}40;
+  border: 3px solid ${colors.solarGold};
+  box-shadow: 
+    0 0 12px 0 rgba(255,215,0,0.15),
+    0 0 24px 0 rgba(255,215,0,0.08),
+    inset 0 1px 0 rgba(255,215,0,0.1);
   animation: ${pulse} 2s infinite ease-in-out;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 0 20px 0 rgba(255,215,0,0.3),
+      0 0 40px 0 rgba(255,215,0,0.15),
+      inset 0 1px 0 rgba(255,215,0,0.2);
+  }
 `;
 
 const ScanIcon = styled.div`
@@ -154,7 +195,7 @@ const ScanIcon = styled.div`
 const WelcomeScreen: React.FC = () => {
   return (
     <Container>
-      <Title>Papillon®</Title>
+      <Title>Monarch Passport</Title>
       <Tagline>Find Your Wings. Leave a Mark.</Tagline>
       
       <ButtonContainer>
