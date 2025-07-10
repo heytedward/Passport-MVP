@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monarch Passport QR Code Generator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d1b69 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #B19CD9;
+            margin-bottom: 2rem;
+        }
+        
+        .reward-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .reward-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .reward-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #FFD700;
+        }
+        
+        .reward-details {
+            font-size: 0.9rem;
+            color: #B19CD9;
+            margin-bottom: 1rem;
+        }
+        
+        .qr-code {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: white;
+            border-radius: 12px;
+            display: inline-block;
+        }
+        
+        .qr-code img {
+            max-width: 200px;
+            height: auto;
+            border-radius: 8px;
+        }
+        
+        .payload {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            text-align: left;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-top: 1rem;
+        }
+        
+        .rarity {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin: 0.25rem;
+        }
+        
+        .rarity.common { background: #95a5a6; }
+        .rarity.uncommon { background: #2ecc71; }
+        .rarity.rare { background: #e74c3c; }
+        .rarity.epic { background: #9b59b6; }
+        .rarity.legendary { background: #f39c12; }
+        
+        .controls {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #4C1C8C, #B19CD9);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 0.5rem;
+            transition: transform 0.2s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .timestamp-info {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .success-message {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            color: #10b981;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🦋 Monarch Passport QR Generator</h1>
+        
+        <div class="timestamp-info">
+            <strong>⏰ Enhanced QR Codes:</strong> These QR codes now include timestamps and expire after 24 hours for security. 
+            Click "Regenerate All" to create fresh QR codes with current timestamps.
+        </div>
+        
+        <div class="controls">
+            <button onclick="generateAllQRCodes()">🔄 Regenerate All QR Codes</button>
+            <button onclick="togglePayloads()">👁️ Toggle Payloads</button>
+        </div>
+        
+        <div class="reward-grid" id="rewardGrid">
+            <!-- QR codes will be generated here -->
+        </div>
+    </div>
+
+    <script>
+        const testRewards = [
+            {
+                reward_id: 'monarch_jacket_001',
+                name: 'Monarch Varsity Jacket',
+                description: 'Limited edition varsity jacket',
+                category: 'jackets',
+                rarity: 'rare',
+                wings_value: 50,
+                season: 'Spring2025'
+            },
+            {
+                reward_id: 'monarch_tee_001',
+                name: 'Monarch Classic Tee',
+                description: 'Classic branded t-shirt',
+                category: 'tops',
+                rarity: 'common',
+                wings_value: 10,
+                season: 'Spring2025'
+            },
+            {
+                reward_id: 'monarch_cap_001',
+                name: 'Monarch Snapback',
+                description: 'Embroidered snapback cap',
+                category: 'headwear',
+                rarity: 'uncommon',
+                wings_value: 25,
+                season: 'Spring2025'
+            },
+            {
+                reward_id: 'frequency_pulse_theme',
+                name: 'Frequency Pulse Theme',
+                description: 'Unlock the Frequency Pulse passport theme',
+                category: 'themes',
+                rarity: 'epic',
+                wings_value: 0,
+                season: 'Spring2025'
+            },
+            {
+                reward_id: 'solar_shine_theme',
+                name: 'Solar Shine Theme',
+                description: 'Unlock the Solar Shine passport theme',
+                category: 'themes',
+                rarity: 'rare',
+                wings_value: 0,
+                season: 'Spring2025'
+            },
+            {
+                reward_id: 'echo_glass_theme',
+                name: 'Echo Glass Theme',
+                description: 'Unlock the Echo Glass passport theme',
+                category: 'themes',
+                rarity: 'uncommon',
+                wings_value: 0,
+                season: 'Spring2025'
+            },
+            {
+                reward_id: 'exclusive_hoodie_001',
+                name: 'Monarch Exclusive Hoodie',
+                description: 'Limited drop exclusive hoodie',
+                category: 'hoodies',
+                rarity: 'legendary',
+                wings_value: 100,
+                season: 'Spring2025'
+            },
+            {
+                reward_id: 'test_expired_001',
+                name: 'Expired Test Item',
+                description: 'This QR code is expired (for testing)',
+                category: 'test',
+                rarity: 'common',
+                wings_value: 5,
+                season: 'Winter2024',
+                expired: true
+            }
+        ];
+
+        let showPayloads = false;
+
+        function createQRPayload(reward) {
+            const payload = {
+                type: 'monarch_reward',
+                rewardId: reward.reward_id,
+                season: reward.season,
+                timestamp: reward.expired ? Date.now() - 86400000 - 3600000 : Date.now()
+            };
+            
+            return JSON.stringify(payload);
+        }
+
+        // Use Google Charts API for reliable QR code generation
+        function generateQRCodeURL(text) {
+            const encodedText = encodeURIComponent(text);
+            return `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodedText}&choe=UTF-8`;
+        }
+
+        function generateAllQRCodes() {
+            const grid = document.getElementById('rewardGrid');
+            grid.innerHTML = '<div style="text-align: center; grid-column: 1 / -1; padding: 2rem;">🔄 Generating QR codes...</div>';
+            
+            let html = '';
+            
+            for (const reward of testRewards) {
+                const payload = createQRPayload(reward);
+                const qrCodeURL = generateQRCodeURL(payload);
+                
+                console.log(`Generated QR for ${reward.name}:`, payload);
+                
+                html += `
+                    <div class="reward-card">
+                        <div class="reward-title">${reward.name}</div>
+                        <div class="reward-details">
+                            ${reward.description}<br>
+                            <span class="rarity ${reward.rarity}">${reward.rarity.toUpperCase()}</span>
+                            ${reward.wings_value > 0 ? `<br>💰 ${reward.wings_value} WINGS` : ''}
+                            ${reward.expired ? '<br>⚠️ EXPIRED (for testing)' : ''}
+                        </div>
+                        <div class="qr-code">
+                            <img src="${qrCodeURL}" 
+                                 alt="QR Code for ${reward.name}" 
+                                 onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y5ZjlmOSIgc3Ryb2tlPSIjZGRkIi8+PHRleHQgeD0iMTAwIiB5PSI5MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSIjNjY2Ij5RUiBHZW5lcmF0aW9uPC90ZXh0Pjx0ZXh0IHg9IjEwMCIgeT0iMTEwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM2NjYiPkZhaWxlZDwvdGV4dD48L3N2Zz4='" />
+                        </div>
+                        <div class="payload" style="display: ${showPayloads ? 'block' : 'none'};">
+                            ${payload}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            grid.innerHTML = html;
+            
+            // Show success message
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.innerHTML = '✅ <strong>QR Codes Generated Successfully!</strong> You can now scan these codes with your Monarch Passport app.';
+            document.querySelector('.container').insertBefore(successDiv, document.querySelector('.reward-grid'));
+            
+            // Remove success message after 5 seconds
+            setTimeout(() => {
+                if (successDiv.parentNode) {
+                    successDiv.parentNode.removeChild(successDiv);
+                }
+            }, 5000);
+            
+            console.log('QR codes generation completed');
+        }
+
+        function togglePayloads() {
+            showPayloads = !showPayloads;
+            const payloads = document.querySelectorAll('.payload');
+            payloads.forEach(payload => {
+                payload.style.display = showPayloads ? 'block' : 'none';
+            });
+        }
+
+        // Generate QR codes when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, generating QR codes...');
+            generateAllQRCodes();
+        });
+    </script>
+</body>
+</html>
