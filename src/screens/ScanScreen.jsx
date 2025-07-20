@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../hooks/useAuth';
 import GlassCard from '../components/GlassCard';
 import GlowButton from '../components/GlowButton';
+import { detectCircularQR } from '../utils/circularQRDetection';
 
 // Supabase client
 const supabase = createClient(
@@ -310,7 +311,9 @@ const ScanScreen = () => {
   const [cameraError, setCameraError] = useState(null);
   const [showPermissionRequest, setShowPermissionRequest] = useState(false);
   const [debugInfo, setDebugInfo] = useState('');
+  const [scanningMode, setScanningMode] = useState('regular'); // 'regular' or 'circular'
   const qrCodeScannerRef = useRef(null);
+  const videoCanvasRef = useRef(null);
   const scannerElementId = "qr-reader";
 
   // Check camera permissions on mount
@@ -479,12 +482,25 @@ const ScanScreen = () => {
     setError(null);
 
     try {
-      // Validate QR payload
-      if (!validateQRPayload(result.text)) {
-        throw new Error('Invalid QR code. This is not a Monarch reward code.');
+      let payload;
+      
+      // Handle circular QR results (direct text mapping to reward ID)
+      if (result.type === 'circular') {
+        // For circular QR, the text directly maps to reward ID
+        payload = {
+          type: 'monarch_reward',
+          rewardId: result.text.trim(),
+          season: 'current' // Default season for circular QR
+        };
+        setDebugInfo(`Circular QR detected: ${result.text} (confidence: ${result.confidence?.toFixed(2)})`);
+      } else {
+        // Regular QR code validation
+        if (!validateQRPayload(result.text)) {
+          throw new Error('Invalid QR code. This is not a Monarch reward code.');
+        }
+        payload = JSON.parse(result.text);
+        setDebugInfo(`Regular QR detected: ${result.text}`);
       }
-
-      const payload = JSON.parse(result.text);
       
       // Check if user already owns this reward
       const { exists, error: checkError } = await checkExistingReward(payload.rewardId, user.id);
@@ -545,6 +561,46 @@ const ScanScreen = () => {
      }
    }, [user, validateQRPayload, checkExistingReward, fetchReward, addToCloset, updateWingsBalance, logActivity]);
 
+  // Capture video frame and try circular QR detection
+  const tryCircularQRDetection = useCallback(async () => {
+    try {
+      if (!qrCodeScannerRef.current) return null;
+      
+      // Get the video element from the HTML5QRCode scanner
+      const scannerElement = document.getElementById(scannerElementId);
+      const videoElement = scannerElement?.querySelector('video');
+      
+      if (!videoElement) {
+        console.warn('No video element found for circular QR detection');
+        return null;
+      }
+      
+      // Create canvas to capture frame
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      canvas.width = videoElement.videoWidth || 640;
+      canvas.height = videoElement.videoHeight || 480;
+      
+      // Draw current video frame to canvas
+      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+      
+      // Try circular QR detection
+      const circularResult = await detectCircularQR(canvas, ctx);
+      
+      if (circularResult) {
+        console.log('Circular QR detected:', circularResult);
+        setScanningMode('circular');
+        return circularResult;
+      }
+      
+      return null;
+    } catch (error) {
+      console.warn('Circular QR detection failed:', error);
+      return null;
+    }
+  }, []);
+
   // iOS-optimized fallback scanning
   const startScanningSimple = useCallback(async () => {
     try {
@@ -562,13 +618,29 @@ const ScanScreen = () => {
       // Try with environment camera first, then any camera
       let cameraToUse = devices.find(d => d.id.includes('environment')) || devices[0];
       
+      let lastCircularCheck = 0;
+      const circularCheckInterval = 1000;
+      
       await qrCodeScanner.start(
         cameraToUse.id,
         simpleConfig,
         (decodedText) => {
-          handleScanSuccess({ text: decodedText });
+          setScanningMode('regular');
+          handleScanSuccess({ text: decodedText, type: 'regular' });
         },
-        () => {}
+        () => {
+          // Try circular QR detection when regular fails
+          const now = Date.now();
+          if (now - lastCircularCheck > circularCheckInterval) {
+            lastCircularCheck = now;
+            
+            tryCircularQRDetection().then(circularResult => {
+              if (circularResult) {
+                handleScanSuccess(circularResult);
+              }
+            }).catch(() => {});
+          }
+        }
       );
       
       setCameraError(null);
@@ -714,21 +786,40 @@ const ScanScreen = () => {
 
       console.log('Using camera:', devices.find(d => d.id === cameraId)?.label || cameraId);
 
-      // Start scanning with error handling
+      // Start scanning with error handling and circular QR fallback
       try {
+        let lastCircularCheck = 0;
+        const circularCheckInterval = 1000; // Check for circular QR every 1 second
+        
         await qrCodeScanner.start(
           cameraId,
           baseConfig,
           (decodedText) => {
-            console.log('QR Code scanned:', decodedText);
-            handleScanSuccess({ text: decodedText });
+            console.log('Regular QR Code scanned:', decodedText);
+            setScanningMode('regular');
+            handleScanSuccess({ text: decodedText, type: 'regular' });
           },
           (error) => {
-            // Ignore normal scanning errors (no QR in view)
+            // When regular QR fails, periodically try circular QR detection
+            const now = Date.now();
+            if (now - lastCircularCheck > circularCheckInterval) {
+              lastCircularCheck = now;
+              
+              // Try circular QR detection in background
+              tryCircularQRDetection().then(circularResult => {
+                if (circularResult) {
+                  console.log('Circular QR fallback successful:', circularResult);
+                  handleScanSuccess(circularResult);
+                }
+              }).catch(err => {
+                // Silently handle circular QR detection errors
+                console.debug('Circular QR check failed:', err);
+              });
+            }
           }
         );
         
-        console.log('QR Scanner started successfully');
+        console.log('QR Scanner started successfully with circular QR fallback');
       } catch (startError) {
         console.error('Failed to start scanner:', startError);
         throw startError;
@@ -749,7 +840,7 @@ const ScanScreen = () => {
         setCameraError('Failed to start camera. Please check permissions and try again.');
       }
     }
-  }, [handleScanSuccess, startScanningSimple]);
+  }, [handleScanSuccess, startScanningSimple, tryCircularQRDetection]);
 
   // Initialize QR scanner - only when explicitly requested
   useEffect(() => {
@@ -780,11 +871,13 @@ const ScanScreen = () => {
   const handleTryAgain = () => {
     setError(null);
     setCameraError(null);
+    setScanningMode('regular');
     setIsScanning(true);
   };
 
   const handleRetryCamera = () => {
     setCameraError(null);
+    setScanningMode('regular');
     setIsScanning(false);
     setTimeout(() => setIsScanning(true), 100);
   };
@@ -868,12 +961,14 @@ const ScanScreen = () => {
   const handleStartScanning = () => {
     setError(null);
     setCameraError(null);
+    setScanningMode('regular');
     setIsScanning(true);
   };
 
   const handleStopScanning = () => {
     setIsScanning(false);
     setCameraInitialized(false);
+    setScanningMode('regular');
     stopScanning();
   };
 
@@ -1022,6 +1117,19 @@ const ScanScreen = () => {
             <p style={{ margin: '0.5rem 0 0 0', color: '#aaa', fontSize: '1rem' }}>
               Point your camera at a QR code to earn rewards
             </p>
+            {scanningMode === 'circular' && (
+              <div style={{ 
+                margin: '0.5rem 0 0 0', 
+                color: '#FFB000', 
+                fontSize: '0.8rem',
+                background: 'rgba(255, 176, 0, 0.1)',
+                padding: '0.3rem 0.8rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 176, 0, 0.3)'
+              }}>
+                🔍 Circular QR Detection Active
+              </div>
+            )}
             {debugInfo && (
               <div style={{ 
                 margin: '1rem 0 0 0', 
