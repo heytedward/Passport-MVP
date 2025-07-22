@@ -255,7 +255,7 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
             activity_type: 'scan',
             activity_title: 'QR Code Scanned',
             activity_description: 'Scanned QR code at Coffee Shop Downtown',
-            wings_earned: 15,
+            wings_earned: 35,
             activity_date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
           },
           {
@@ -263,7 +263,7 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
             activity_type: 'quest',
             activity_title: 'Daily Quest Completed',
             activity_description: 'Completed "Morning Scan Challenge"',
-            wings_earned: 25,
+            wings_earned: 75,
             activity_date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
           },
           {
@@ -271,7 +271,7 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
             activity_type: 'daily',
             activity_title: 'Daily Login Bonus',
             activity_description: 'Claimed daily login reward',
-            wings_earned: 10,
+            wings_earned: 35,
             activity_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
           },
           {
@@ -279,7 +279,7 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
             activity_type: 'referral',
             activity_title: 'Friend Joined',
             activity_description: 'Your friend Alex joined using your referral code',
-            wings_earned: 50,
+            wings_earned: 150,
             activity_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
           },
           {
@@ -287,7 +287,7 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
             activity_type: 'event',
             activity_title: 'Special Event Participation',
             activity_description: 'Participated in "Weekend Warrior" event',
-            wings_earned: 100,
+            wings_earned: 150,
             activity_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
           },
           {
@@ -295,7 +295,7 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
             activity_type: 'scan',
             activity_title: 'QR Code Scanned',
             activity_description: 'Scanned QR code at Retail Store Plaza',
-            wings_earned: 20,
+            wings_earned: 35,
             activity_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
           },
           {
@@ -303,7 +303,7 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
             activity_type: 'quest',
             activity_title: 'Weekly Quest Completed',
             activity_description: 'Completed "Explorer Challenge" - visited 5 locations',
-            wings_earned: 75,
+            wings_earned: 150,
             activity_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
           },
           {
@@ -311,7 +311,7 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
             activity_type: 'daily',
             activity_title: 'Streak Bonus',
             activity_description: '7-day login streak achieved!',
-            wings_earned: 35,
+            wings_earned: 75,
             activity_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
           }
         ];
@@ -422,7 +422,7 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
                   </ActivityContent>
                   <ActivityMeta>
                     {activity.wings_earned > 0 && (
-                      <WingsEarned>+{activity.wings_earned} WINGS</WingsEarned>
+                      <WingsEarned>+{activity.wings_earned} WNGS</WingsEarned>
                     )}
                     <ActivityDate>{formatDate(activity.activity_date)}</ActivityDate>
                   </ActivityMeta>

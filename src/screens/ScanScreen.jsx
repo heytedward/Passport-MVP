@@ -4,6 +4,10 @@ import { Html5Qrcode, Html5QrcodeScanType } from 'html5-qrcode';
 import { useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../hooks/useAuth';
+import { useStamps } from '../hooks/useStamps';
+// Circular QR imports commented out for now
+// import { detectCircularQR } from '../utils/circularQRDetection';
+// import { validateSecureCircularQR, decryptCircularQR } from '../utils/secureCircularQR';
 import GlassCard from '../components/GlassCard';
 import GlowButton from '../components/GlowButton';
 
@@ -254,7 +258,7 @@ const EnhancedRewardModal = ({ reward, onClose, onShowInCloset, user }) => {
               {reward.rarity} • #{reward.mintNumber}
             </p>
             {reward.wingsEarned > 0 && (
-              <WingsEarned>+{reward.wingsEarned} WINGS 🦋</WingsEarned>
+                              <WingsEarned>+{reward.wingsEarned} WNGS 🦋</WingsEarned>
             )}
             <ButtonContainer>
               <ClaimButton onClick={handleClaim}>🎁 Claim Reward</ClaimButton>
@@ -281,7 +285,7 @@ const EnhancedRewardModal = ({ reward, onClose, onShowInCloset, user }) => {
             </p>
             {reward.wingsEarned > 0 && (
               <p style={{ color: '#FFB000', marginBottom: '2rem' }}>
-                +{reward.wingsEarned} WINGS earned!
+                +{reward.wingsEarned} WNGS earned!
               </p>
             )}
             <ButtonContainer>
@@ -302,48 +306,20 @@ const EnhancedRewardModal = ({ reward, onClose, onShowInCloset, user }) => {
 const ScanScreen = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { awardQRStamp, awardFirstItemStamp, awardStyleStamp, hasStamp } = useStamps();
   const [isScanning, setIsScanning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [cameraInitialized, setCameraInitialized] = useState(false);
+  const [cameraInitializing, setCameraInitializing] = useState(false);
   const [reward, setReward] = useState(null);
   const [error, setError] = useState(null);
   const [cameraError, setCameraError] = useState(null);
-  const [showPermissionRequest, setShowPermissionRequest] = useState(false);
-  const [debugInfo, setDebugInfo] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  // Removed showPermissionRequest and debugInfo states for cleaner flow
   const qrCodeScannerRef = useRef(null);
   const scannerElementId = "qr-reader";
 
-  // Check camera permissions on mount
-  useEffect(() => {
-    const checkPermissions = async () => {
-      if (!user) return;
-      
-      try {
-        // Check if permissions API is available
-        if (navigator.permissions && navigator.permissions.query) {
-          const permissionStatus = await navigator.permissions.query({ name: 'camera' });
-          
-          if (permissionStatus.state === 'denied') {
-            setShowPermissionRequest(true);
-            return;
-          }
-        }
-        
-        // Check if camera is available
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          // Don't start scanning automatically, just check availability
-          setDebugInfo('Camera available, ready to scan');
-        } else {
-          setCameraError('Camera not supported in this browser');
-        }
-      } catch (error) {
-        console.log('Permissions API not supported, will request on scan start');
-        setDebugInfo('Permissions check skipped - will request on scan start');
-      }
-    };
-    
-    checkPermissions();
-  }, [user]);
+  // Removed camera permissions check for streamlined flow
 
   // Helper functions - defined first since handleScanSuccess depends on them
   const validateQRPayload = useCallback((data) => {
@@ -368,14 +344,24 @@ const ScanScreen = () => {
   }, []);
 
   const checkExistingReward = useCallback(async (rewardId, userId) => {
-    const { data, error } = await supabase
-      .from('user_closet')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('reward_id', rewardId)
-      .single();
-    
-    return { exists: !!data, error };
+    try {
+      const { data, error } = await supabase
+        .from('user_closet')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('reward_id', rewardId)
+        .maybeSingle(); // Use maybeSingle() instead of single() to handle no results gracefully
+      
+      if (error) {
+        console.error('Database error checking existing reward:', error);
+        return { exists: false, error };
+      }
+      
+      return { exists: !!data, error: null };
+    } catch (err) {
+      console.error('Unexpected error in checkExistingReward:', err);
+      return { exists: false, error: err };
+    }
   }, []);
 
   const fetchReward = useCallback(async (rewardId) => {
@@ -408,6 +394,12 @@ const ScanScreen = () => {
   const addToCloset = useCallback(async (rewardData, userId) => {
     const mintNumber = await generateMintNumber(rewardData.reward_id);
     
+    // Determine item_type based on category
+    const getItemType = (category) => {
+      const physicalCategories = ['jackets', 'tops', 'bottoms', 'headwear', 'accessories', 'footwear', 'hoodies'];
+      return physicalCategories.includes(category) ? 'physical_item' : 'digital_collectible';
+    };
+    
     const { data, error } = await supabase
       .from('user_closet')
       .insert([
@@ -417,6 +409,7 @@ const ScanScreen = () => {
           name: rewardData.name,
           rarity: rewardData.rarity,
           category: rewardData.category,
+          item_type: getItemType(rewardData.category),
           mint_number: mintNumber,
           earned_date: new Date().toISOString(),
           earned_via: 'qr_scan',
@@ -430,20 +423,25 @@ const ScanScreen = () => {
   }, [generateMintNumber]);
 
   const updateWingsBalance = useCallback(async (userId, wingsToAdd) => {
-    const { data: currentBalance } = await supabase
-      .from('user_profiles')
-      .select('wings_balance')
-      .eq('user_id', userId)
-      .single();
+    try {
+      const { data: currentBalance } = await supabase
+        .from('user_profiles')
+        .select('wings_balance')
+        .eq('id', userId) // Use 'id' not 'user_id' for user_profiles table
+        .single();
 
-    const newBalance = (currentBalance?.wings_balance || 0) + wingsToAdd;
+      const newBalance = (currentBalance?.wings_balance || 0) + wingsToAdd;
 
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({ wings_balance: newBalance })
-      .eq('user_id', userId);
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ wings_balance: newBalance })
+        .eq('id', userId); // Use 'id' not 'user_id' for user_profiles table
 
-    return { error };
+      return { error };
+    } catch (err) {
+      console.error('Error updating wings balance:', err);
+      return { error: err };
+    }
   }, []);
 
   const logActivity = useCallback(async (userId, activityData) => {
@@ -454,7 +452,7 @@ const ScanScreen = () => {
           user_id: userId,
           activity_type: 'scan',
           activity_title: `Scanned: ${activityData.rewardName}`,
-          activity_description: `Earned ${activityData.wingsEarned} WINGS • Mint #${activityData.mintNumber}`,
+          activity_description: `Earned ${activityData.wingsEarned} WNGS • Mint #${activityData.mintNumber}`,
           wings_earned: activityData.wingsEarned,
           reward_id: activityData.rewardId,
           metadata: {
@@ -470,63 +468,445 @@ const ScanScreen = () => {
     }
   }, []);
 
+  // ========== CIRCULAR QR DETECTION FUNCTIONS - COMMENTED OUT FOR NOW ==========
+  /*
+  // Helper function to get pixel brightness
+  const getPixelBrightness = (data, x, y, width) => {
+    const index = (y * width + x) * 4;
+    const r = data[index] || 0;
+    const g = data[index + 1] || 0;
+    const b = data[index + 2] || 0;
+    return (r + g + b) / 3;
+  };
+
+  // Detect anchor points for circular QR
+  const detectCircularAnchors = (imageData) => {
+    const width = imageData.width;
+    const height = imageData.height;
+    const data = imageData.data;
+    
+    const darkSpots = [];
+    const threshold = 120;
+    const stepSize = Math.max(2, Math.floor(Math.min(width, height) / 150));
+    
+    // Scan for dark regions
+    for (let y = 15; y < height - 15; y += stepSize) {
+      for (let x = 15; x < width - 15; x += stepSize) {
+        const brightness = getPixelBrightness(data, x, y, width);
+        
+        if (brightness < threshold) {
+          let darkCount = 0;
+          let totalCount = 0;
+          
+          for (let dy = -4; dy <= 4; dy += 1) {
+            for (let dx = -4; dx <= 4; dx += 1) {
+              const nx = x + dx;
+              const ny = y + dy;
+              if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                const nBrightness = getPixelBrightness(data, nx, ny, width);
+                totalCount++;
+                if (nBrightness < threshold) darkCount++;
+              }
+            }
+          }
+          
+          const darkRatio = darkCount / totalCount;
+          if (darkRatio > 0.5) {
+            darkSpots.push({ x, y, confidence: darkRatio });
+          }
+        }
+      }
+    }
+    
+    if (darkSpots.length < 4) return null;
+    
+    // Find center
+    const centerX = darkSpots.reduce((sum, spot) => sum + spot.x, 0) / darkSpots.length;
+    const centerY = darkSpots.reduce((sum, spot) => sum + spot.y, 0) / darkSpots.length;
+    
+    // Group by distance from center
+    const radiusGroups = {};
+    darkSpots.forEach(spot => {
+      const distance = Math.sqrt((spot.x - centerX) ** 2 + (spot.y - centerY) ** 2);
+      const radiusKey = Math.round(distance / 20) * 20;
+      
+      if (!radiusGroups[radiusKey]) radiusGroups[radiusKey] = [];
+      radiusGroups[radiusKey].push({ ...spot, distance });
+    });
+    
+    // Find best anchor group
+    let bestGroup = null;
+    let bestScore = 0;
+    
+    for (const radius in radiusGroups) {
+      const spots = radiusGroups[radius];
+      
+      if (spots.length >= 4 && spots.length <= 12) {
+        const angles = spots.map(spot => 
+          Math.atan2(spot.y - centerY, spot.x - centerX) * 180 / Math.PI
+        ).sort((a, b) => a - b);
+        
+        let totalAngleDiff = 0;
+        for (let i = 1; i < angles.length; i++) {
+          totalAngleDiff += angles[i] - angles[i-1];
+        }
+        const avgAngleDiff = totalAngleDiff / (angles.length - 1);
+        const expectedAngleDiff = 360 / spots.length;
+        
+        const angleDiffScore = 1 - Math.abs(avgAngleDiff - expectedAngleDiff) / expectedAngleDiff;
+        const confidenceScore = spots.reduce((sum, s) => sum + s.confidence, 0) / spots.length;
+        const score = angleDiffScore * confidenceScore;
+        
+        if (score > bestScore) {
+          bestScore = score;
+          bestGroup = spots;
+        }
+      }
+    }
+    
+    if (!bestGroup) return null;
+    
+    // Sort and limit to best anchors
+    const sortedSpots = bestGroup.sort((a, b) => {
+      const angleA = Math.atan2(a.y - centerY, a.x - centerX);
+      const angleB = Math.atan2(b.y - centerY, b.x - centerX);
+      return angleA - angleB;
+    });
+    
+    let finalSpots = sortedSpots.slice(0, 7);
+    if (finalSpots.length < 4) return null;
+    
+    const avgRadius = finalSpots.reduce((sum, spot) => 
+      sum + Math.sqrt((spot.x - centerX) ** 2 + (spot.y - centerY) ** 2), 0
+    ) / finalSpots.length;
+    
+    return finalSpots.map(spot => ({
+      ...spot,
+      centerX,
+      centerY,
+      radius: avgRadius
+    }));
+  };
+
+  // Extract data from circular QR rings
+  const extractCircularData = (imageData, anchors) => {
+    const centerX = anchors[0].centerX;
+    const centerY = anchors[0].centerY;
+    const anchorRadius = anchors[0].radius;
+    
+    // Calculate ring radii
+    const outerDataRadius = anchorRadius * 0.75;
+    const middleDataRadius = anchorRadius * 0.58;
+    const innerDataRadius = anchorRadius * 0.42;
+    
+    let binaryString = '';
+    const threshold = 128;
+    
+    // Inner ring: 8 arc segments
+    for (let i = 0; i < 8; i++) {
+      const angle = (i * 45) * (Math.PI / 180);
+      let darkPixels = 0;
+      let totalPixels = 0;
+      
+      for (let radiusOffset = -8; radiusOffset <= 8; radiusOffset += 3) {
+        for (let angleOffset = -20; angleOffset <= 20; angleOffset += 5) {
+          const sampleAngle = angle + (angleOffset * Math.PI / 180);
+          const sampleRadius = innerDataRadius + radiusOffset;
+          const x = Math.round(centerX + Math.cos(sampleAngle) * sampleRadius);
+          const y = Math.round(centerY + Math.sin(sampleAngle) * sampleRadius);
+          
+          if (x >= 0 && x < imageData.width && y >= 0 && y < imageData.height) {
+            const brightness = getPixelBrightness(imageData.data, x, y, imageData.width);
+            totalPixels++;
+            if (brightness < threshold) darkPixels++;
+          }
+        }
+      }
+      
+      const bit = (totalPixels > 0 && (darkPixels / totalPixels) > 0.4) ? '1' : '0';
+      binaryString += bit;
+    }
+    
+    // Middle ring: 16 arc segments
+    for (let i = 0; i < 16; i++) {
+      const angle = (i * 22.5) * (Math.PI / 180);
+      let darkPixels = 0;
+      let totalPixels = 0;
+      
+      for (let radiusOffset = -6; radiusOffset <= 6; radiusOffset += 2) {
+        for (let angleOffset = -10; angleOffset <= 10; angleOffset += 3) {
+          const sampleAngle = angle + (angleOffset * Math.PI / 180);
+          const sampleRadius = middleDataRadius + radiusOffset;
+          const x = Math.round(centerX + Math.cos(sampleAngle) * sampleRadius);
+          const y = Math.round(centerY + Math.sin(sampleAngle) * sampleRadius);
+          
+          if (x >= 0 && x < imageData.width && y >= 0 && y < imageData.height) {
+            const brightness = getPixelBrightness(imageData.data, x, y, imageData.width);
+            totalPixels++;
+            if (brightness < threshold) darkPixels++;
+          }
+        }
+      }
+      
+      const bit = (totalPixels > 0 && (darkPixels / totalPixels) > 0.4) ? '1' : '0';
+      binaryString += bit;
+    }
+    
+    // Outer ring: 24 arc segments
+    for (let i = 0; i < 24; i++) {
+      const angle = (i * 15) * (Math.PI / 180);
+      let darkPixels = 0;
+      let totalPixels = 0;
+      
+      for (let radiusOffset = -5; radiusOffset <= 5; radiusOffset += 2) {
+        for (let angleOffset = -6; angleOffset <= 6; angleOffset += 2) {
+          const sampleAngle = angle + (angleOffset * Math.PI / 180);
+          const sampleRadius = outerDataRadius + radiusOffset;
+          const x = Math.round(centerX + Math.cos(sampleAngle) * sampleRadius);
+          const y = Math.round(centerY + Math.sin(sampleAngle) * sampleRadius);
+          
+          if (x >= 0 && x < imageData.width && y >= 0 && y < imageData.height) {
+            const brightness = getPixelBrightness(imageData.data, x, y, imageData.width);
+            totalPixels++;
+            if (brightness < threshold) darkPixels++;
+          }
+        }
+      }
+      
+      const bit = (totalPixels > 0 && (darkPixels / totalPixels) > 0.4) ? '1' : '0';
+      binaryString += bit;
+    }
+    
+    return binaryString.length === 48 ? binaryString : null;
+  };
+
+  // Validate circular QR checksum
+  const validateCircularChecksum = (dataBits, checksumBits) => {
+    if (!dataBits || !checksumBits || dataBits.length !== 40 || checksumBits.length !== 8) {
+      return false;
+    }
+    
+    let calculatedChecksum = 0;
+    for (let i = 0; i < dataBits.length; i += 8) {
+      const byte = parseInt(dataBits.substr(i, 8), 2) || 0;
+      calculatedChecksum ^= byte;
+    }
+    
+    const expectedChecksum = parseInt(checksumBits, 2);
+    return calculatedChecksum === expectedChecksum;
+  };
+
+  // Convert binary to text
+  const binaryToText = (binary) => {
+    if (!binary || binary.length === 0) return '';
+    
+    const chunks = binary.match(/.{8}/g) || [];
+    let result = '';
+    
+    for (const chunk of chunks) {
+      if (chunk.length === 8) {
+        const charCode = parseInt(chunk, 2);
+        if (charCode >= 32 && charCode <= 126) {
+          result += String.fromCharCode(charCode);
+        }
+      }
+    }
+    
+    return result.trim();
+  };
+
+  // Main circular QR detection function
+  const detectCircularQR = async (canvas, ctx) => {
+    try {
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      
+      // Step 1: Detect anchors
+      const anchors = detectCircularAnchors(imageData);
+      if (!anchors || anchors.length < 4) {
+        return null;
+      }
+      
+      // Step 2: Extract data
+      const binaryData = extractCircularData(imageData, anchors);
+      if (!binaryData) {
+        return null;
+      }
+      
+      // Step 3: Validate checksum
+      const dataBits = binaryData.substring(0, 40);
+      const checksumBits = binaryData.substring(40, 48);
+      
+      if (!validateCircularChecksum(dataBits, checksumBits)) {
+        return null;
+      }
+      
+      // Step 4: Convert to text
+      const decodedText = binaryToText(dataBits);
+      
+      return {
+        text: decodedText,
+        type: 'circular',
+        confidence: anchors.reduce((sum, a) => sum + a.confidence, 0) / anchors.length
+      };
+      
+    } catch (error) {
+      console.warn('Circular QR detection error:', error);
+      return null;
+    }
+  };
+  */
+
   // Handle successful QR scan - defined after helper functions
   const handleScanSuccess = useCallback(async (result) => {
-    if (!result?.text || !user) return;
+    if (!result?.text || !user || isProcessing) return;
 
+    // Prevent multiple simultaneous scans
+    setIsProcessing(true);
+
+    // Stop scanning first
+    await stopScanning();
+    
+    // Add a brief delay to prevent rapid state changes
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
     setIsScanning(false);
     setIsLoading(true);
     setError(null);
 
     try {
-      // Validate QR payload
+      console.log('🔄 Processing scan result:', result);
+
+      // Simplified: Only handle regular QR codes for now
+      console.log('📱 Processing regular QR code');
+      
+      // Parse JSON payload from regular QR code
       if (!validateQRPayload(result.text)) {
         throw new Error('Invalid QR code. This is not a Monarch reward code.');
       }
-
-      const payload = JSON.parse(result.text);
       
+      const payload = JSON.parse(result.text);
+      const rewardId = payload.rewardId;
+
+      console.log('🎁 Final reward ID:', rewardId);
+      console.log('📦 Payload:', payload);
+      
+      console.log('🔍 Step 2: Checking existing reward...');
       // Check if user already owns this reward
       const { exists, error: checkError } = await checkExistingReward(payload.rewardId, user.id);
-      if (checkError) throw new Error('Failed to verify reward status');
+      if (checkError) {
+        console.error('❌ checkExistingReward failed:', checkError);
+        throw new Error(`Database error: ${checkError.message || 'Failed to verify reward status'}`);
+      }
       
       if (exists) {
         throw new Error('You already own this reward!');
       }
+      console.log('✅ User does not own this reward yet');
 
+      console.log('🔍 Step 3: Fetching reward details...');
       // Fetch reward details
       const { data: rewardData, error: fetchError } = await fetchReward(payload.rewardId);
-      if (fetchError || !rewardData) {
+      if (fetchError) {
+        console.error('❌ fetchReward failed:', fetchError);
+        throw new Error(`Failed to fetch reward: ${fetchError.message}`);
+      }
+      if (!rewardData) {
+        console.warn('❌ No reward found for ID:', payload.rewardId);
         throw new Error('Reward not found or no longer available');
       }
+      console.log('✅ Reward data fetched:', rewardData);
 
+      console.log('🔍 Step 4: Adding to closet...');
       // Add to user's closet
       const { data: closetItem, error: closetError } = await addToCloset(rewardData, user.id);
-      if (closetError) throw new Error('Failed to add reward to your closet');
+      if (closetError) {
+        console.error('❌ addToCloset failed:', closetError);
+        throw new Error(`Failed to add reward to closet: ${closetError.message}`);
+      }
+      console.log('✅ Added to closet:', closetItem);
 
-      // Update WINGS balance
+      console.log('🔍 Step 5: Updating WNGS balance...');
+      // Update WNGS balance
       const wingsEarned = rewardData.wings_value || 0;
       if (wingsEarned > 0) {
         const { error: wingsError } = await updateWingsBalance(user.id, wingsEarned);
-        if (wingsError) console.warn('Failed to update WINGS balance');
+        if (wingsError) {
+          console.warn('⚠️ Failed to update WNGS balance:', wingsError);
+        } else {
+          console.log('✅ WNGS balance updated');
+        }
       }
 
+      console.log('🔍 Step 6: Logging activity...');
       // Log activity
-      await logActivity(user.id, {
-        rewardId: rewardData.reward_id,
-        rewardName: rewardData.name,
-        wingsEarned,
-        mintNumber: closetItem.mint_number,
-        rarity: rewardData.rarity,
-        category: rewardData.category
-      });
+      try {
+        await logActivity(user.id, {
+          rewardId: rewardData.reward_id,
+          rewardName: rewardData.name,
+          wingsEarned,
+          mintNumber: closetItem.mint_number,
+          rarity: rewardData.rarity,
+          category: rewardData.category
+        });
+        console.log('✅ Activity logged');
+      } catch (activityError) {
+        console.warn('⚠️ Failed to log activity (non-critical):', activityError);
+      }
 
+      console.log('🔍 Step 7: Awarding stamps...');
+      // Award stamps for QR scanning achievements
+      try {
+        // Award QR Scanner stamp on first QR scan
+        if (!hasStamp('qr_scanner')) {
+          await awardQRStamp();
+          console.log('✅ QR Scanner stamp awarded!');
+        }
+
+        // Award First Item stamp on first clothing item scan
+        const isClothingItem = ['tops', 'bottoms', 'outerwear', 'accessories', 'shoes'].includes(rewardData.category?.toLowerCase());
+        if (isClothingItem && !hasStamp('first_item')) {
+          await awardFirstItemStamp(rewardData.category);
+          console.log('✅ First Item stamp awarded!');
+        }
+
+        // Check for Style Icon stamp (3+ different categories)
+        if (!hasStamp('style_icon')) {
+          try {
+            // Get user's closet to check categories
+            const { data: closetItems, error: closetError } = await supabase
+              .from('user_closet')
+              .select('item_id, rewards(category)')
+              .eq('user_id', user.id);
+
+            if (!closetError && closetItems) {
+              const uniqueCategories = new Set();
+              closetItems.forEach(item => {
+                if (item.rewards?.category) {
+                  uniqueCategories.add(item.rewards.category.toLowerCase());
+                }
+              });
+
+              if (uniqueCategories.size >= 3) {
+                await awardStyleStamp(uniqueCategories.size);
+                console.log('✅ Style Icon stamp awarded!');
+              }
+            }
+          } catch (styleCheckError) {
+            console.warn('⚠️ Failed to check style categories:', styleCheckError);
+          }
+        }
+      } catch (stampError) {
+        console.warn('⚠️ Failed to award stamps (non-critical):', stampError);
+      }
+
+      console.log('🔍 Step 8: Showing reward modal...');
       // Show reward modal
       setReward({
         ...rewardData,
         mintNumber: closetItem.mint_number,
         wingsEarned
       });
+      console.log('✅ Processing complete!');
 
       // Add haptic feedback if available
       if (navigator.vibrate) {
@@ -534,57 +914,109 @@ const ScanScreen = () => {
       }
 
     } catch (err) {
-      setError(err.message);
+      console.error('Scan processing error:', err);
       
-      // Add error haptic feedback
-      if (navigator.vibrate) {
-        navigator.vibrate([200, 100, 200]);
-      }
+      // Add a delay before showing error to prevent rapid state changes
+      setTimeout(() => {
+        setError(err.message);
+        
+        // Add error haptic feedback
+        if (navigator.vibrate) {
+          navigator.vibrate([200, 100, 200]);
+        }
+      }, 200);
          } finally {
-       setIsLoading(false);
+       setTimeout(() => {
+         setIsLoading(false);
+         setIsProcessing(false);
+       }, 200);
      }
-   }, [user, validateQRPayload, checkExistingReward, fetchReward, addToCloset, updateWingsBalance, logActivity]);
+   }, [user, isProcessing, validateQRPayload, checkExistingReward, fetchReward, addToCloset, updateWingsBalance, logActivity]);
 
-  // iOS-optimized fallback scanning
-  const startScanningSimple = useCallback(async () => {
+  // Circular QR detection function - commented out for now
+  /*
+  const tryCircularQRDetection = useCallback(async () => {
     try {
-      const devices = await Html5Qrcode.getCameras();
-      const qrCodeScanner = new Html5Qrcode(scannerElementId);
-      qrCodeScannerRef.current = qrCodeScanner;
-
-      // Ultra-simple config for iOS compatibility
-      const simpleConfig = {
-        fps: 5,
-        qrbox: { width: 200, height: 200 },
-        aspectRatio: 1.0
-      };
-
-      // Try with environment camera first, then any camera
-      let cameraToUse = devices.find(d => d.id.includes('environment')) || devices[0];
+      console.log('🎯 Starting secure circular QR detection...');
       
-      await qrCodeScanner.start(
-        cameraToUse.id,
-        simpleConfig,
-        (decodedText) => {
-          handleScanSuccess({ text: decodedText });
-        },
-        () => {}
-      );
+      const videoElement = document.querySelector('#qr-reader video');
+      if (!videoElement || videoElement.videoWidth === 0) {
+        console.log('⚠️ Video element not ready');
+        return;
+      }
       
-      setCameraError(null);
-    } catch (err) {
-      console.error('Simple scanning failed:', err);
-      setCameraError('Camera not supported on this device. Please try using a different browser or device.');
+      console.log('📷 Video ready, creating canvas...');
+      
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = videoElement.videoWidth;
+      canvas.height = videoElement.videoHeight;
+      ctx.drawImage(videoElement, 0, 0);
+      
+      console.log('🖼️ Canvas created, detecting circular pattern...');
+      
+      const circularResult = await detectCircularQR(canvas, ctx);
+      
+      if (circularResult && circularResult.text) {
+        console.log('🎉 Circular pattern detected:', circularResult.text);
+        console.log('🔍 Attempting to decrypt and validate...');
+        
+        // Try to decrypt the QR data locally first
+        const decryptedResult = decryptCircularQR(circularResult.text);
+        
+        if (decryptedResult.isValid) {
+          console.log('✅ Local decryption successful:', decryptedResult.productCode);
+          
+          // For now, use local validation (later add server validation)
+          handleScanSuccess({
+            text: decryptedResult.productCode,
+            type: 'secure_circular',
+            confidence: circularResult.confidence,
+            securityValidated: true,
+            localValidation: true // Remove this when server validation is added
+          });
+        } else {
+          console.log('❌ Local decryption failed:', decryptedResult.error);
+          setError(decryptedResult.error || 'Invalid QR code');
+        }
+      } else {
+        console.log('❌ No circular QR pattern found');
+      }
+      
+    } catch (error) {
+      console.error('💥 Circular QR detection error:', error);
+      setError('QR detection failed');
+    }
+  }, [detectCircularQR, handleScanSuccess]);
+  */
+
+  // Simplified scanner for regular QR codes only
+  const simplifiedScanFunction = useCallback(async (decodedText, decodedResult) => {
+    console.log('🔍 Scan attempt - Text:', decodedText);
+    
+    try {
+      if (decodedText && typeof decodedText === 'string' && decodedText.length > 0) {
+        // Try to parse as JSON (regular QR format)
+        const payload = JSON.parse(decodedText);
+        if (payload && payload.rewardId) {
+          console.log('✅ Regular QR detected successfully');
+          handleScanSuccess({ text: decodedText, type: 'regular' });
+          return;
+        }
+      }
+    } catch (error) {
+      console.log('❌ QR code parsing failed - not a valid Monarch QR code');
+      // Simply log and continue scanning - no circular QR fallback
     }
   }, [handleScanSuccess]);
 
+  // Removed unused startScanningSimple function for cleaner code
+
   const startScanning = useCallback(async () => {
     try {
-      // Clear any previous errors
       setCameraError(null);
-      setDebugInfo('Starting camera initialization...');
       
-      // Check for HTTPS requirement on iOS
+      // Check for HTTPS requirement on mobile
       const isLocalDevelopment = window.location.hostname === 'localhost' || 
                                 window.location.hostname.startsWith('192.168.') || 
                                 window.location.hostname.startsWith('10.') ||
@@ -592,69 +1024,42 @@ const ScanScreen = () => {
       
       if (window.location.protocol !== 'https:' && !isLocalDevelopment) {
         setCameraError('Camera requires HTTPS connection. Please use a secure connection.');
-        setDebugInfo('HTTPS check failed');
         return;
       }
-      
-      setDebugInfo(`Protocol: ${window.location.protocol}, Host: ${window.location.hostname}`);
 
-              // Enhanced permission handling for mobile browsers
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          setDebugInfo('MediaDevices API available, requesting permission...');
-          try {
-            // Request permission with progressive fallback
-            let stream;
-            
-            try {
-              setDebugInfo('Trying optimal camera constraints...');
-              // Try with optimal constraints first
-              stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                  facingMode: { ideal: "environment" },
-                  width: { min: 480, ideal: 720, max: 1920 },
-                  height: { min: 480, ideal: 720, max: 1920 }
-                }
-              });
-              setDebugInfo('Optimal constraints successful');
-            } catch (constraintError) {
-              console.warn('Optimal constraints failed, trying basic constraints:', constraintError);
-              setDebugInfo('Optimal failed, trying basic constraints...');
-              // Fallback to basic constraints
-              stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "environment" }
-              });
-              setDebugInfo('Basic constraints successful');
-            }
-            
-            // Stop the stream immediately, we just needed permission
-            if (stream) {
-              stream.getTracks().forEach(track => track.stop());
-              setDebugInfo('Permission stream stopped, proceeding to scanner...');
-            }
-        } catch (permissionError) {
-          console.error('Permission error:', permissionError);
-          
-          // Provide specific error messages based on error type
-          if (permissionError.name === 'NotAllowedError') {
-            setCameraError('Camera permission denied. Please allow camera access in your browser settings and refresh the page.');
-          } else if (permissionError.name === 'NotFoundError') {
-            setCameraError('No camera found. Please ensure your device has a camera.');
-          } else if (permissionError.name === 'NotSupportedError') {
-            setCameraError('Camera not supported in this browser. Try using Chrome, Safari, or Firefox.');
-          } else {
-            setCameraError('Failed to access camera. Please check permissions and try again.');
-          }
-          return;
-        }
-      } else {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setCameraError('Camera API not supported in this browser. Please use a modern browser.');
         return;
       }
-
-      // Wait a moment for DOM element to be ready
-      await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Check if camera is available with retry logic
+      // Simple permission request
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" }
+        });
+        
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+      } catch (permissionError) {
+        console.error('Permission error:', permissionError);
+        
+        if (permissionError.name === 'NotAllowedError') {
+          setCameraError('Camera permission denied. Please allow camera access when prompted.');
+          return;
+        } else if (permissionError.name === 'NotFoundError') {
+          setCameraError('No camera found. Please ensure your device has a camera.');
+          return;
+        } else {
+          setCameraError('Failed to access camera. Please check permissions and try again.');
+          return;
+        }
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Get available cameras
       let devices;
       try {
         devices = await Html5Qrcode.getCameras();
@@ -669,7 +1074,6 @@ const ScanScreen = () => {
         return;
       }
 
-      // Ensure scanner element exists
       const scannerElement = document.getElementById(scannerElementId);
       if (!scannerElement) {
         console.error('Scanner element not found');
@@ -680,82 +1084,63 @@ const ScanScreen = () => {
       const qrCodeScanner = new Html5Qrcode(scannerElementId);
       qrCodeScannerRef.current = qrCodeScanner;
 
-      // Mobile-optimized config with progressive enhancement
-      const baseConfig = {
-        fps: 8, // Reduced for better mobile performance
-        qrbox: { width: 250, height: 250 },
+      // Canvas creation for circular QR analysis removed - using regular QR only
+
+      const mobileConfig = {
+        fps: 10,
+        qrbox: { width: 200, height: 200 },
         aspectRatio: 1.0,
         disableFlip: false,
         supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
       };
 
-      // Smart camera selection for mobile devices
-      let cameraId;
-      
-      // Priority order for camera selection
+      let cameraId = devices[0].id;
       const backCamera = devices.find(device => {
         const label = device.label.toLowerCase();
-        return (
-          label.includes('back') || 
-          label.includes('rear') ||
-          label.includes('environment') ||
-          label.includes('camera2') || // iOS sometimes uses this
-          (label.includes('camera') && !label.includes('front') && !label.includes('user'))
-        );
+        return label.includes('back') || label.includes('rear') || label.includes('environment');
       });
       
-      // Fallback to any available camera
-      cameraId = backCamera?.id || devices[devices.length - 1]?.id || devices[0]?.id;
-      
-      if (!cameraId) {
-        setCameraError('No suitable camera found. Please ensure your device has a working camera.');
-        return;
+      if (backCamera) {
+        cameraId = backCamera.id;
       }
 
-      console.log('Using camera:', devices.find(d => d.id === cameraId)?.label || cameraId);
-
-      // Start scanning with error handling
       try {
         await qrCodeScanner.start(
           cameraId,
-          baseConfig,
-          (decodedText) => {
-            console.log('QR Code scanned:', decodedText);
-            handleScanSuccess({ text: decodedText });
+          mobileConfig,
+          // Use simplified scan function for regular QR only
+          (decodedText, decodedResult) => {
+            simplifiedScanFunction(decodedText, decodedResult);
           },
+          // Simplified error callback for regular QR scanning
           (error) => {
-            // Ignore normal scanning errors (no QR in view)
+            // Only log scan errors, not trigger detection
+            // Detection logic is handled in simplifiedScanFunction
+            console.log('📡 Scan attempt in progress...');
           }
         );
         
-        console.log('QR Scanner started successfully');
+        // Regular QR scanning is now active
+        
+        setCameraError(null);
       } catch (startError) {
         console.error('Failed to start scanner:', startError);
-        throw startError;
+        setCameraError('Failed to start camera. Please try again or refresh the page.');
       }
     } catch (err) {
       console.error('Failed to start QR scanner:', err);
-      if (err.toString().includes('NotAllowedError') || err.toString().includes('Permission')) {
-        setCameraError('Camera permission denied. Please allow camera access and refresh the page.');
-      } else if (err.toString().includes('NotFoundError') || err.toString().includes('camera')) {
-        setCameraError('No camera found. Please ensure your device has a camera.');
-      } else if (err.toString().includes('NotSupportedError')) {
-        setCameraError('Camera not supported on this device or browser.');
-      } else if (err.toString().includes('OverconstrainedError')) {
-        setCameraError('Camera constraints not supported. Trying with basic settings...');
-        // Retry with simpler config
-        setTimeout(() => startScanningSimple(), 1000);
-      } else {
-        setCameraError('Failed to start camera. Please check permissions and try again.');
-      }
+      setCameraError('Failed to start camera. Please check permissions and try again.');
     }
-  }, [handleScanSuccess, startScanningSimple]);
+  }, [handleScanSuccess, simplifiedScanFunction]);
 
   // Initialize QR scanner - only when explicitly requested
   useEffect(() => {
-    if (isScanning && user && !showPermissionRequest && !cameraInitialized) {
+    if (isScanning && user && !cameraInitialized) {
       setCameraInitialized(true);
-      startScanning();
+      // Add a small delay to prevent rapid state changes
+      setTimeout(() => {
+        startScanning();
+      }, 100);
     }
     
     return () => {
@@ -763,11 +1148,13 @@ const ScanScreen = () => {
         stopScanning();
       }
     };
-  }, [isScanning, user, showPermissionRequest, cameraInitialized, startScanning]);
+  }, [isScanning, user, cameraInitialized, startScanning]);
 
   const stopScanning = async () => {
     if (qrCodeScannerRef.current) {
       try {
+        // Circular interval cleanup removed - using regular QR only
+        
         await qrCodeScannerRef.current.stop();
         qrCodeScannerRef.current.clear();
       } catch (err) {
@@ -789,93 +1176,89 @@ const ScanScreen = () => {
     setTimeout(() => setIsScanning(true), 100);
   };
 
-  const testBasicCamera = async () => {
-    try {
-      setDebugInfo('Testing basic camera access...');
-      
-      // Test if camera API exists
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera API not supported in this browser');
-      }
-      
-      // Test basic camera access
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true 
-      });
-      
-      setDebugInfo('Camera access successful! Creating video element...');
-      
-      // Create a simple video element to test
-      const video = document.createElement('video');
-      video.srcObject = stream;
-      video.autoplay = true;
-      video.playsInline = true;
-      video.style.width = '100%';
-      video.style.height = '300px';
-      video.style.objectFit = 'cover';
-      
-      // Replace scanner content with video
-      const scannerElement = document.getElementById(scannerElementId);
-      if (scannerElement) {
-        scannerElement.innerHTML = '';
-        scannerElement.appendChild(video);
-      }
-      
-      setCameraError(null);
-      setDebugInfo('Camera test successful - video should be showing');
-      
-    } catch (error) {
-      console.error('Basic camera test failed:', error);
-      setDebugInfo(`Camera test failed: ${error.message}`);
-      setCameraError(`Camera test failed: ${error.message}`);
-    }
-  };
+  // Removed testBasicCamera function for streamlined flow
 
   const requestCameraPermission = async () => {
     try {
-      setShowPermissionRequest(false);
-      setDebugInfo('Requesting camera permission...');
+      // Check for HTTPS requirement
+      const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+      if (!isSecure && window.location.hostname !== 'localhost') {
+        setCameraError('Camera requires HTTPS. Please access this page via https://');
+        return;
+      }
       
-      // Add debug info about the current environment
-      const isHTTPS = window.location.protocol === 'https:';
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const userAgent = navigator.userAgent;
+      // Check for in-app browser
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      const isInApp = /Instagram|FBAN|FBAV|Twitter|Line|WhatsApp|Snapchat|TikTok|WeChat/i.test(userAgent);
+      if (isInApp) {
+        setCameraError('Camera not available in in-app browsers. Please open in your default browser (Chrome, Safari, Firefox).');
+        return;
+      }
       
-      setDebugInfo(`Environment: ${isHTTPS ? 'HTTPS' : 'HTTP'}, ${isLocalhost ? 'Localhost' : 'Remote'}, UA: ${userAgent.slice(0, 50)}...`);
+      // Check if camera API is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError('Camera API not supported. Please use Chrome, Safari, or Firefox, and ensure you\'re not in private/incognito mode.');
+        return;
+      }
       
-      // Request camera permission explicitly
+      // Request camera permission
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: "environment" } 
       });
       
-      // Permission granted, stop the stream and start scanning
+      // Permission granted, stop the stream (the actual scanning will start from useEffect)
       stream.getTracks().forEach(track => track.stop());
       setCameraError(null);
-      setDebugInfo('Permission granted, starting scanner...');
-      setIsScanning(true);
       
     } catch (error) {
       console.error('Permission request failed:', error);
-      setDebugInfo(`Permission failed: ${error.name} - ${error.message}`);
+      
       if (error.name === 'NotAllowedError') {
-        setCameraError('Camera permission denied. Please allow camera access in your browser settings.');
+        setCameraError('Camera permission denied. Please allow camera access when prompted.');
+      } else if (error.name === 'NotFoundError') {
+        setCameraError('No camera found. Please ensure your device has a camera.');
+      } else if (error.name === 'NotSupportedError') {
+        setCameraError('Camera not supported. Please use Chrome, Safari, or Firefox.');
+      } else if (error.name === 'OverconstrainedError') {
+        // Try with basic constraints
+        try {
+          const basicStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          basicStream.getTracks().forEach(track => track.stop());
+          setCameraError(null);
+          return;
+        } catch (basicError) {
+          setCameraError('Failed to access camera. Please check your device and browser.');
+        }
       } else {
-        setCameraError('Failed to access camera. Please check your device and browser settings.');
+        setCameraError(`Failed to access camera: ${error.message}`);
       }
+      
+      // Go back to ready screen on error
+      setIsScanning(false);
     }
   };
 
-  const handleStartScanning = () => {
+  const handleStartScanning = async () => {
     setError(null);
     setCameraError(null);
-    setIsScanning(true);
+    setIsLoading(true); // Show loading during permission request
+    
+    // Start scanning immediately
+    try {
+      await requestCameraPermission();
+      // Add a delay to prevent rapid state changes
+      setTimeout(() => {
+        setIsLoading(false);
+        setIsScanning(true);
+      }, 300);
+    } catch (error) {
+      console.error('Camera permission error:', error);
+      setIsLoading(false);
+      // Let the camera error handling in the UI take care of showing errors
+    }
   };
 
-  const handleStopScanning = () => {
-    setIsScanning(false);
-    setCameraInitialized(false);
-    stopScanning();
-  };
+  // Removed handleStopScanning function for cleaner flow
 
   if (!user) {
     return (
@@ -892,48 +1275,18 @@ const ScanScreen = () => {
 
   return (
     <Container>
-      {!isScanning && !showPermissionRequest && (
+      {!isScanning && (
         <ScannerCard>
-          <div style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>📱</div>
+          <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🎯</div>
           <h2 style={{ marginBottom: '1rem', color: '#fff' }}>Ready to Scan</h2>
-          <p style={{ marginBottom: '2rem', color: '#ccc', lineHeight: '1.6' }}>
-            Point your camera at a QR code on a Papillon item to earn rewards and add items to your closet.
-          </p>
           
-          {debugInfo && (
-            <div style={{ 
-              background: 'rgba(0, 255, 0, 0.1)', 
-              border: '1px solid rgba(0, 255, 0, 0.3)',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginBottom: '1rem',
-              fontSize: '0.8rem',
-              color: '#0f0',
-              textAlign: 'left',
-              fontFamily: 'monospace'
-            }}>
-              Status: {debugInfo}
-            </div>
-          )}
-
-          {cameraError && (
-            <div style={{ 
-              background: 'rgba(231, 76, 60, 0.1)', 
-              border: '1px solid rgba(231, 76, 60, 0.3)',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginBottom: '1rem',
-              fontSize: '0.9rem',
-              color: '#e74c3c',
-              textAlign: 'left'
-            }}>
-              ⚠️ {cameraError}
-            </div>
-          )}
+          <p style={{ marginBottom: '2.5rem', color: '#ccc', lineHeight: '1.6', fontSize: '1.1rem' }}>
+            Point your camera at a QR code on a Papillon item to earn rewards
+          </p>
 
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <GlowButton onClick={handleStartScanning}>
-              🎯 Start Scanning
+              📱 Start Scanning
             </GlowButton>
             <GlowButton 
               onClick={() => navigate('/')}
@@ -949,65 +1302,53 @@ const ScanScreen = () => {
         </ScannerCard>
       )}
 
-      {!isScanning && !showPermissionRequest && (
-        <ScannerCard>
-          <div style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>📱</div>
-          <h2 style={{ marginBottom: '1rem', color: '#fff' }}>Ready to Scan</h2>
-          <p style={{ marginBottom: '2rem', color: '#ccc', lineHeight: '1.6' }}>
-            Point your camera at a QR code on a Papillon item to earn rewards and add items to your closet.
-          </p>
-          
-          {debugInfo && (
-            <div style={{ 
-              background: 'rgba(0, 255, 0, 0.1)', 
-              border: '1px solid rgba(0, 255, 0, 0.3)',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginBottom: '1rem',
-              fontSize: '0.8rem',
-              color: '#0f0',
-              textAlign: 'left',
-              fontFamily: 'monospace'
-            }}>
-              Status: {debugInfo}
-            </div>
-          )}
-
-          {cameraError && (
-            <div style={{ 
-              background: 'rgba(231, 76, 60, 0.1)', 
-              border: '1px solid rgba(231, 76, 60, 0.3)',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginBottom: '1rem',
-              fontSize: '0.9rem',
-              color: '#e74c3c',
-              textAlign: 'left'
-            }}>
-              ⚠️ {cameraError}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <GlowButton onClick={handleStartScanning}>
-              🎯 Start Scanning
-            </GlowButton>
-            <GlowButton 
-              onClick={() => navigate('/')}
-              style={{ 
-                background: 'transparent',
-                borderColor: '#666',
-                color: '#ccc'
-              }}
-            >
-              Back to Home
-            </GlowButton>
-          </div>
-        </ScannerCard>
-      )}
-
-      {isScanning && !showPermissionRequest && (
+      {isScanning && (
         <>
+          {/* Debug buttons for circular QR testing - commented out for now */}
+          {/*
+          {process.env.NODE_ENV === 'development' && (
+            <>
+              <button 
+                onClick={tryCircularQRDetection}
+                style={{ 
+                  position: 'absolute', 
+                  top: '10px', 
+                  right: '10px', 
+                  zIndex: 1000,
+                  background: '#F4B019',
+                  color: 'black',
+                  padding: '10px',
+                  border: 'none',
+                  borderRadius: '5px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                🎯 Test Circular QR
+              </button>
+              
+              <button 
+                onClick={tryCircularQRDetection}
+                style={{ 
+                  position: 'absolute', 
+                  top: '70px', 
+                  right: '10px', 
+                  zIndex: 1000,
+                  background: '#4C1C8C',
+                  color: 'white',
+                  padding: '10px',
+                  border: 'none',
+                  borderRadius: '5px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                🛡️ Test Secure QR
+              </button>
+            </>
+          )}
+          */}
+
           {/* Title overlay */}
           <div style={{
             position: 'absolute',
@@ -1022,19 +1363,6 @@ const ScanScreen = () => {
             <p style={{ margin: '0.5rem 0 0 0', color: '#aaa', fontSize: '1rem' }}>
               Point your camera at a QR code to earn rewards
             </p>
-            {debugInfo && (
-              <div style={{ 
-                margin: '1rem 0 0 0', 
-                fontSize: '0.7rem', 
-                color: '#0f0',
-                background: 'rgba(0, 0, 0, 0.7)',
-                padding: '0.5rem',
-                borderRadius: '4px',
-                fontFamily: 'monospace'
-              }}>
-                {debugInfo}
-              </div>
-            )}
           </div>
 
           {/* Camera container */}
@@ -1125,12 +1453,59 @@ const ScanScreen = () => {
               }} />
             </div>
             
-            {/* Add CSS animation for scanning line */}
+            {/* Add CSS for scanning line and hide default QR scanner styles */}
             <style>{`
               @keyframes scan-line {
                 0% { transform: translateY(0); opacity: 1; }
                 50% { transform: translateY(125px); opacity: 0.8; }
                 100% { transform: translateY(250px); opacity: 0; }
+              }
+
+              /* Completely hide default HTML5QRCode styling */
+              #${scannerElementId} img {
+                display: none !important;
+              }
+              #${scannerElementId} > div {
+                border: none !important;
+                background: transparent !important;
+              }
+              #${scannerElementId} canvas {
+                border-radius: 0 !important;
+                border: none !important;
+              }
+              
+              /* Hide ALL default QR scanner UI elements */
+              #${scannerElementId} > div > div {
+                display: none !important;
+              }
+              #${scannerElementId} > div > img {
+                display: none !important;
+              }
+              #${scannerElementId} > div > canvas {
+                display: none !important;
+              }
+              #${scannerElementId} > div > svg {
+                display: none !important;
+              }
+              #${scannerElementId} > div:last-child {
+                display: none !important;
+              }
+              
+              /* Only show the video element */
+              #${scannerElementId} video {
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: cover !important;
+                display: block !important;
+              }
+              
+              /* Hide any white/default overlays */
+              #${scannerElementId} * {
+                border: none !important;
+                background: transparent !important;
+              }
+              #${scannerElementId} video {
+                background: black !important;
               }
             `}</style>
           </div>
@@ -1143,8 +1518,16 @@ const ScanScreen = () => {
             transform: 'translateX(-50%)',
             zIndex: 10
           }}>
-            <GlowButton onClick={() => navigate('/')}>
-              Cancel
+            <GlowButton 
+              onClick={() => navigate('/')}
+              style={{
+                background: 'rgba(0, 0, 0, 0.7)',
+                borderColor: '#666',
+                color: '#fff',
+                backdropFilter: 'blur(10px)'
+              }}
+            >
+              ← Back
             </GlowButton>
           </div>
 
@@ -1156,7 +1539,7 @@ const ScanScreen = () => {
               left: '50%',
               transform: 'translate(-50%, -50%)',
               zIndex: 15,
-              padding: '1.5rem',
+              padding: '2rem',
               background: 'rgba(18, 18, 18, 0.95)',
               borderRadius: '16px',
               border: '2px solid rgba(231, 76, 60, 0.4)',
@@ -1165,70 +1548,29 @@ const ScanScreen = () => {
               width: '350px',
               backdropFilter: 'blur(20px)'
             }}>
-              <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📱</div>
+              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📱</div>
               
-              <h3 style={{ color: '#e74c3c', marginBottom: '1rem', fontSize: '1.1rem' }}>
+              <h3 style={{ color: '#e74c3c', marginBottom: '1rem', fontSize: '1.2rem' }}>
                 Camera Access Required
               </h3>
               
-              <p style={{ color: '#ccc', marginBottom: '1.5rem', fontSize: '0.9rem', lineHeight: '1.4' }}>
+              <p style={{ color: '#ccc', marginBottom: '2rem', fontSize: '1rem', lineHeight: '1.4' }}>
                 {cameraError}
               </p>
               
-              {/* Mobile-specific instructions */}
-              {/iPad|iPhone|iPod|Android/.test(navigator.userAgent) && (
-                <div style={{ 
-                  background: 'rgba(255, 193, 7, 0.15)', 
-                  border: '1px solid rgba(255, 193, 7, 0.4)',
-                  borderRadius: '12px',
-                  padding: '1.2rem',
-                  marginBottom: '1.5rem',
-                  fontSize: '0.85rem',
-                  color: '#ffc107',
-                  textAlign: 'left'
-                }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', textAlign: 'center' }}>
-                    📋 Mobile Tips:
-                  </div>
-                  <div style={{ lineHeight: '1.6' }}>
-                    • Tap "Allow" when prompted for camera access<br/>
-                    • Check browser settings if permission was denied<br/>
-                    • Try refreshing the page<br/>
-                    • Ensure you're not in Private/Incognito mode<br/>
-                    • Make sure your camera isn't being used by another app
-                  </div>
-                </div>
-              )}
-              
-              <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                 <GlowButton 
                   onClick={handleRetryCamera} 
                   style={{ 
-                    fontSize: '0.9rem', 
-                    padding: '12px 20px',
                     background: '#4C1C8C',
                     borderColor: '#4C1C8C'
                   }}
                 >
-                  🔄 Retry Camera
-                </GlowButton>
-                <GlowButton 
-                  onClick={() => window.location.reload()} 
-                  style={{ 
-                    fontSize: '0.9rem', 
-                    padding: '12px 20px',
-                    background: '#FFB000',
-                    borderColor: '#FFB000',
-                    color: '#000'
-                  }}
-                >
-                  🔄 Refresh Page
+                  🔄 Try Again
                 </GlowButton>
                 <GlowButton 
                   onClick={() => navigate('/')} 
                   style={{ 
-                    fontSize: '0.9rem', 
-                    padding: '12px 20px',
                     background: 'transparent',
                     borderColor: '#666',
                     color: '#ccc'

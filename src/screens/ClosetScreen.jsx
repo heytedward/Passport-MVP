@@ -96,7 +96,7 @@ const mockClosetItems = [
     rarity: 'rare',
     category: 'jackets',
     mint_number: 37,
-    wings_earned: 25,
+    wings_earned: 75,
     earned_date: '2025-03-15',
     earned_via: 'qr_scan'
   },
@@ -108,7 +108,7 @@ const mockClosetItems = [
     rarity: 'epic',
     category: 'accessories',
     mint_number: 3,
-    wings_earned: 30,
+    wings_earned: 150,
     earned_date: '2025-03-12',
     earned_via: 'qr_scan'
   },
@@ -120,7 +120,7 @@ const mockClosetItems = [
     rarity: 'common',
     category: 'headwear',
     mint_number: 21,
-    wings_earned: 10,
+    wings_earned: 15,
     earned_date: '2025-03-10',
     earned_via: 'qr_scan'
   },
@@ -132,7 +132,7 @@ const mockClosetItems = [
     rarity: 'rare',
     category: 'tops',
     mint_number: 89,
-    wings_earned: 25,
+    wings_earned: 75,
     earned_date: '2025-03-08',
     earned_via: 'qr_scan'
   },
@@ -144,7 +144,7 @@ const mockClosetItems = [
     rarity: 'rare',
     category: 'bottoms',
     mint_number: 156,
-    wings_earned: 25,
+    wings_earned: 75,
     earned_date: '2025-03-05',
     earned_via: 'qr_scan'
   },
@@ -168,7 +168,7 @@ const mockClosetItems = [
   //   rarity: 'legendary',
   //   category: 'badges',
   //   mint_number: 1,
-  //   wings_earned: 100,
+  //   wings_earned: 300,
   //   earned_date: '2025-03-20',
   //   earned_via: 'achievement'
   // },
@@ -180,7 +180,7 @@ const mockClosetItems = [
   //   rarity: 'epic',
   //   category: 'passes',
   //   mint_number: 7,
-  //   wings_earned: 50,
+  //   wings_earned: 150,
   //   earned_date: '2025-03-18',
   //   earned_via: 'qr_scan'
   // },
@@ -193,7 +193,7 @@ const mockClosetItems = [
     rarity: 'epic',
     category: 'wallpapers',
     mint_number: 12,
-    wings_earned: 40,
+    wings_earned: 150,
     earned_date: '2025-03-22',
     earned_via: 'achievement',
     file_type: 'image',
@@ -257,7 +257,7 @@ const themeUnlockRequirements = {
   solarShine: {
     name: 'Solar Shine',
     description: 'Bright golden energy theme',
-    requirements: ['Scan 10 QR codes', 'Earn 100 WINGS'],
+    requirements: ['Scan 10 QR codes', 'Earn 100 WNGS'],
     unlocked: false,
     icon: '☀️',
     rarity: 'rare'
@@ -281,7 +281,7 @@ const themeUnlockRequirements = {
   nightScan: {
     name: 'Night Scan',
     description: 'Elite scanner theme for night owls',
-    requirements: ['Scan QR code after midnight', 'Earn 500 WINGS', 'Complete weekly challenge'],
+    requirements: ['Scan QR code after midnight', 'Earn 500 WNGS', 'Complete weekly challenge'],
     unlocked: false,
     icon: '🌙',
     rarity: 'legendary'
@@ -757,7 +757,7 @@ const ItemModal = ({ item, isOpen, onClose }) => {
                 <ModalTitle>Unlock Requirements</ModalTitle>
                 <ModalDetails>
                   <div style={{ textAlign: 'left', lineHeight: '2' }}>
-                    {item.requirements.map((req, index) => (
+                    {(item.requirements || []).map((req, index) => (
                       <div key={index} style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
@@ -786,7 +786,7 @@ const ItemModal = ({ item, isOpen, onClose }) => {
                   <div><ModalDetailLabel>Date:</ModalDetailLabel> {details.date}</div>
                   <div><ModalDetailLabel>Location:</ModalDetailLabel> {details.location}</div>
                   <div><ModalDetailLabel>Season:</ModalDetailLabel> {details.season}</div>
-                  <div><ModalDetailLabel>WINGS:</ModalDetailLabel> +{item.wings_earned}</div>
+                  <div><ModalDetailLabel>WNGS:</ModalDetailLabel> +{item.wings_earned}</div>
                 </ModalDetails>
               </>
             )}
