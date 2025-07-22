@@ -19,6 +19,7 @@ import SettingsScreen from './screens/SettingsScreen';
 import QuestsScreen from './screens/QuestsScreen';
 import LoginScreen from './screens/LoginScreen';
 import AdminScreen from './screens/AdminScreen';
+import CircularQRGenerator from './components/CircularQRGenerator';
 
 import NavBar from './components/NavBar';
 import FloatingScanButton from './components/FloatingScanButton';
@@ -86,6 +87,7 @@ function App() {
             <Route path="/settings" element={<SettingsScreen themeMode={themeMode} onToggleTheme={toggleTheme} />} />
             <Route path="/quests" element={<QuestsScreen />} />
             <Route path="/login" element={<LoginScreen />} />
+            <Route path="/generate-qr" element={<CircularQRGenerator />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/admin" element={<AdminScreen />} />
             </Route>

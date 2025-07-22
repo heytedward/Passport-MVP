@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="95" fill="#4C1C8C" stroke="#FFB000" stroke-width="6"/>
+  <circle cx="100" cy="100" r="80" fill="none" stroke="#FFB000" stroke-width="2" stroke-dasharray="8,4"/>
+  
+  <!-- Fire/flame icon -->
+  <path d="M100 60 Q85 75 90 95 Q80 85 75 100 Q75 115 90 120 Q85 130 100 135 Q115 130 110 120 Q125 115 125 100 Q120 85 110 95 Q115 75 100 60 Z" fill="#FFB000"/>
+  <path d="M100 65 Q90 78 93 92 Q88 88 85 98 Q85 108 93 112 Q90 118 100 122 Q110 118 107 112 Q115 108 115 98 Q112 88 107 92 Q110 78 100 65 Z" fill="#4C1C8C"/>
+  
+  <!-- Inner flame -->
+  <path d="M100 75 Q95 82 97 90 Q94 88 92 93 Q92 98 97 100 Q95 103 100 105 Q105 103 103 100 Q108 98 108 93 Q106 88 103 90 Q105 82 100 75 Z" fill="#FFB000"/>
+  
+  <!-- Calendar/streak dots -->
+  <circle cx="70" cy="130" r="3" fill="#FFB000"/>
+  <circle cx="80" cy="130" r="3" fill="#FFB000"/>
+  <circle cx="90" cy="130" r="3" fill="#FFB000"/>
+  <circle cx="100" cy="130" r="3" fill="#FFB000"/>
+  <circle cx="110" cy="130" r="3" fill="#FFB000"/>
+  <circle cx="120" cy="130" r="3" fill="#FFB000"/>
+  <circle cx="130" cy="130" r="4" fill="#FFD700"/>
+  
+  <!-- Number 7 -->
+  <text x="100" y="155" text-anchor="middle" fill="#FFB000" font-size="20" font-weight="bold" font-family="Arial">7</text>
+  
+  <text x="100" y="170" text-anchor="middle" fill="#FFB000" font-size="12" font-weight="bold" font-family="Arial">STREAK</text>
+  <text x="100" y="185" text-anchor="middle" fill="#FFB000" font-size="12" font-weight="bold" font-family="Arial">MASTER</text>
+</svg> 

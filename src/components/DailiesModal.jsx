@@ -1,6 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { createClient } from '@supabase/supabase-js';
+import { useAuth } from '../hooks/useAuth';
+import { useStamps } from '../hooks/useStamps';
 import GlassCard from './GlassCard';
+
+const supabase = createClient(
+  process.env.REACT_APP_SUPABASE_URL,
+  process.env.REACT_APP_SUPABASE_ANON_KEY
+);
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -117,8 +125,7 @@ const QuestMeta = styled.div`
 `;
 
 const QuestStatus = styled.div`
-  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
-  color: ${({ $completed, theme }) => 
+  font-family: ${({ $completed, theme }) => 
     $completed ? theme.colors.accent.green : theme.colors.text.secondary};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
   font-size: ${({ theme }) => theme.typography.fontSize.small};
@@ -200,8 +207,146 @@ const CompletionMessage = styled.div`
   color: #22C55E;
 `;
 
-const DailiesModal = ({ isOpen, onClose }) => {
+const DailiesModal = ({ isOpen, onClose, onQuestComplete }) => {
+  const { user } = useAuth();
+  const { awardStreakStamp } = useStamps();
   const [completedQuests, setCompletedQuests] = useState(new Set());
+  const [loading, setLoading] = useState(false);
+
+  // Load today's completed quests from database
+  useEffect(() => {
+    if (isOpen && user) {
+      loadTodaysCompletions();
+    }
+  }, [isOpen, user]);
+
+  const loadTodaysCompletions = async () => {
+    if (!user) return;
+    
+    try {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      const { data, error } = await supabase
+        .from('daily_completions')
+        .select('quest_id')
+        .eq('user_id', user.id)
+        .eq('completion_date', today);
+
+      if (error) {
+        console.error('Error loading daily completions:', error);
+        return;
+      }
+
+      const completed = new Set(data.map(d => d.quest_id));
+      setCompletedQuests(completed);
+    } catch (err) {
+      console.error('Error loading daily completions:', err);
+    }
+  };
+
+  const recordDailyCompletion = async (questId, wingsAmount, questTitle) => {
+    if (!user) return;
+    
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Insert daily completion record
+      const { error: completionError } = await supabase
+        .from('daily_completions')
+        .insert({
+          user_id: user.id,
+          quest_id: questId,
+          completion_date: today,
+          wings_earned: wingsAmount,
+          quest_title: questTitle
+        })
+        .select()
+        .single();
+
+      if (completionError) {
+        console.error('Error recording daily completion:', completionError);
+        return;
+      }
+
+      // Award WNGS using the RPC function
+      const { error: wingsError } = await supabase.rpc('add_wings_to_user', {
+        user_id_param: user.id,
+        wings_amount: wingsAmount,
+        activity_type_param: 'daily_quest',
+        description_param: `Completed daily quest: ${questTitle}`
+      });
+
+      if (wingsError) {
+        console.error('Error awarding WNGS:', wingsError);
+      }
+
+      // Check for streak and award streak stamp if needed
+      await checkAndAwardStreak();
+      
+    } catch (err) {
+      console.error('Error in recordDailyCompletion:', err);
+    }
+  };
+
+  const checkAndAwardStreak = async () => {
+    if (!user) return;
+    
+    try {
+      // Get last 7 days of completions
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6); // Today + 6 days ago = 7 days total
+      
+      const { data, error } = await supabase
+        .from('daily_completions')
+        .select('completion_date')
+        .eq('user_id', user.id)
+        .gte('completion_date', sevenDaysAgo.toISOString().split('T')[0])
+        .order('completion_date', { ascending: false });
+
+      if (error) {
+        console.error('Error checking streak:', error);
+        return;
+      }
+
+      // Check if we have completions for 7 consecutive days
+      const uniqueDates = [...new Set(data.map(d => d.completion_date))];
+      
+      if (uniqueDates.length >= 7) {
+        // Check if the dates are consecutive (including today)
+        const today = new Date().toISOString().split('T')[0];
+        const sortedDates = uniqueDates.sort().reverse(); // Most recent first
+        
+        let consecutiveDays = 0;
+        let currentDate = new Date(today);
+        
+        for (let i = 0; i < sortedDates.length && i < 7; i++) {
+          const expectedDate = currentDate.toISOString().split('T')[0];
+          if (sortedDates[i] === expectedDate) {
+            consecutiveDays++;
+            currentDate.setDate(currentDate.getDate() - 1);
+          } else {
+            break;
+          }
+        }
+        
+        if (consecutiveDays >= 7) {
+          try {
+            // Only award streak stamp if awardStreakStamp function is available
+            if (typeof awardStreakStamp === 'function') {
+              await awardStreakStamp(7);
+              console.log('🔥 Streak Master stamp awarded for 7-day streak!');
+            } else {
+              console.log('🔥 7-day streak achieved! (Streak stamp function not available)');
+            }
+          } catch (stampError) {
+            console.warn('Streak stamp might already be earned or function unavailable:', stampError);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error checking streak:', err);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -211,31 +356,61 @@ const DailiesModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleTwitterQuest = () => {
-    // Pre-compose tweet with GM message
-    const tweetText = encodeURIComponent("GM @PapillonBrandUs 🦋 #PapillonBrand #PapillonMorning #GM");
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
+  const handleTwitterQuest = async () => {
+    if (completedQuests.has('twitter')) return;
     
-    // Open Twitter in new tab
-    window.open(twitterUrl, '_blank');
-    
-    // Mark as completed (in real app, you'd verify this server-side)
-    setCompletedQuests(prev => new Set([...prev, 'twitter']));
-    
-    // Award WINGS (would call your backend API)
-    // awardWings(userId, 10, 'twitter_gm', 'Daily Twitter GM quest');
+    setLoading(true);
+    try {
+      // Pre-compose tweet with GM message
+      const tweetText = encodeURIComponent("GM @PapillonBrandUs 🦋 #PapillonBrand #PapillonMorning #GM");
+      const twitterUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
+      
+      // Open Twitter in new tab
+      window.open(twitterUrl, '_blank');
+      
+      // Record completion and award WNGS
+      await recordDailyCompletion('twitter', 10, 'Say GM on Twitter/X');
+      
+      // Update local state
+      setCompletedQuests(prev => new Set([...prev, 'twitter']));
+      
+      // Notify parent component to refresh balance
+      if (onQuestComplete) {
+        onQuestComplete();
+      }
+      
+    } catch (error) {
+      console.error('Error completing Twitter quest:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleInstagramQuest = () => {
-    // Open Instagram to Papillon brand page
-    const instagramUrl = 'https://instagram.com/papillonbrand.us';
-    window.open(instagramUrl, '_blank');
+  const handleInstagramQuest = async () => {
+    if (completedQuests.has('instagram')) return;
     
-    // Mark as completed
-    setCompletedQuests(prev => new Set([...prev, 'instagram']));
-    
-    // Award WINGS
-    // awardWings(userId, 15, 'instagram_engagement', 'Daily Instagram engagement quest');
+    setLoading(true);
+    try {
+      // Open Instagram to Papillon brand page
+      const instagramUrl = 'https://instagram.com/papillonbrand.us';
+      window.open(instagramUrl, '_blank');
+      
+      // Record completion and award WNGS
+      await recordDailyCompletion('instagram', 15, 'Engage on Instagram');
+      
+      // Update local state
+      setCompletedQuests(prev => new Set([...prev, 'instagram']));
+      
+      // Notify parent component to refresh balance
+      if (onQuestComplete) {
+        onQuestComplete();
+      }
+      
+    } catch (error) {
+      console.error('Error completing Instagram quest:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const quests = [
@@ -245,7 +420,7 @@ const DailiesModal = ({ isOpen, onClose }) => {
       icon: '🐦',
       title: 'Say GM on Twitter/X',
       description: 'Tweet "GM @PapillonBrandUs" to start your day',
-      reward: '+10 WINGS',
+      reward: '+10 WNGS',
       action: handleTwitterQuest,
       completed: completedQuests.has('twitter'),
       date: completedQuests.has('twitter') ? 'Mar 18, 2025' : ''
@@ -256,7 +431,7 @@ const DailiesModal = ({ isOpen, onClose }) => {
       icon: '📸',
       title: 'Engage on Instagram',
       description: 'Like, comment, or share our latest post',
-      reward: '+15 WINGS',
+      reward: '+15 WNGS',
       action: handleInstagramQuest,
       completed: completedQuests.has('instagram'),
       date: completedQuests.has('instagram') ? 'Mar 17, 2025' : ''

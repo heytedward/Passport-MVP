@@ -70,12 +70,35 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
+  const signOut = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Sign out error:', error);
+        throw error;
+      }
+      
+      // Clear local state
+      setUser(null);
+      setProfile(null);
+      
+      console.log('Successfully signed out');
+      return { success: true };
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value = {
     user,
     profile,
     loading,
     isAdmin: profile?.role === 'admin',
-    signOut: () => supabase.auth.signOut(),
+    signOut,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

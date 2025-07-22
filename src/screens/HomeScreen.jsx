@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../hooks/useAuth';
+import { useStamps } from '../hooks/useStamps';
 import DailiesModal from '../components/DailiesModal';
 
 const supabase = createClient(
@@ -10,7 +11,7 @@ const supabase = createClient(
   process.env.REACT_APP_SUPABASE_ANON_KEY
 );
 
-// Custom hook for weekly WINGS tracking
+// Custom hook for weekly WNGS tracking
 const useWeeklyWings = (userId) => {
   const [weeklyStats, setWeeklyStats] = useState({
     currentWeekWings: 0,
@@ -19,40 +20,63 @@ const useWeeklyWings = (userId) => {
     daysLeftInWeek: 0
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (userId) {
-      loadWeeklyStats();
-      
-      // Set up real-time subscription for wings updates
-      const subscription = supabase
-        .channel('wings_updates')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'user_profiles',
-          filter: `id=eq.${userId}`
-        }, () => {
-          loadWeeklyStats();
-        })
-        .subscribe();
-
-      return () => subscription.unsubscribe();
+  const loadWeeklyStats = useCallback(async () => {
+    if (!userId) {
+      setLoading(false);
+      return;
     }
-  }, [userId]);
-
-  const loadWeeklyStats = async () => {
+    
     try {
       setLoading(true);
+      setError(null);
+      console.log('Loading weekly stats for user:', userId);
 
-      // Get user profile with weekly stats
-      const { data: profile, error } = await supabase
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 5000)
+      );
+
+      const queryPromise = supabase
         .from('user_profiles')
         .select('wings_balance, current_week_wings, week_start_date')
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      const { data: profile, error } = await Promise.race([queryPromise, timeoutPromise]);
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        
+        // If user profile doesn't exist, create it
+        if (error.code === 'PGRST116') {
+          console.log('User profile not found, creating...');
+          const { error: insertError } = await supabase
+            .from('user_profiles')
+            .insert({
+              id: userId,
+              wings_balance: 0,
+              current_week_wings: 0,
+              week_start_date: new Date().toISOString()
+            });
+          
+          if (insertError) {
+            console.error('Error creating user profile:', insertError);
+          }
+        }
+        
+        // Set default values
+        setWeeklyStats({
+          currentWeekWings: 0,
+          totalWings: 0,
+          weekStartDate: null,
+          daysLeftInWeek: 0
+        });
+        return;
+      }
+
+      console.log('Profile data:', profile);
 
       // Calculate days left in week
       const today = new Date();
@@ -72,27 +96,89 @@ const useWeeklyWings = (userId) => {
         daysLeftInWeek: daysLeft
       });
 
+      console.log('Weekly stats updated:', {
+        currentWeekWings: profile?.current_week_wings || 0,
+        totalWings: profile?.wings_balance || 0,
+      });
+
     } catch (err) {
       console.error('Error loading weekly stats:', err);
+      setError(err.message);
+      setWeeklyStats({
+        currentWeekWings: 0,
+        totalWings: 0,
+        weekStartDate: null,
+        daysLeftInWeek: 0
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId) {
+      loadWeeklyStats();
+      
+      // Real-time subscriptions temporarily disabled due to React Strict Mode conflicts
+      // Will re-enable with proper singleton pattern later
+      // 
+      // const channelName = `home_wngs_updates_${userId}`;
+      // const subscription = supabase
+      //   .channel(channelName)
+      //   .on('postgres_changes', {
+      //     event: 'UPDATE',
+      //     schema: 'public',
+      //     table: 'user_profiles',
+      //     filter: `id=eq.${userId}`
+      //   }, (payload) => {
+      //     console.log('Profile updated via real-time (Home):', payload);
+      //     setWeeklyStats(prev => ({
+      //       ...prev,
+      //       currentWeekWings: payload.new.current_week_wings || 0,
+      //       totalWings: payload.new.wings_balance || 0,
+      //     }));
+      //   })
+      //   .subscribe();
+
+      // return () => {
+      //   subscription.unsubscribe();
+      // };
+    } else {
+      setLoading(false);
+    }
+  }, [userId, loadWeeklyStats]);
+
+  // Add timeout for loading state
+  useEffect(() => {
+    const maxLoadingTimeout = setTimeout(() => {
+      if (loading) {
+        console.warn('⚠️ Weekly stats loading timeout');
+        setLoading(false);
+        setError('Loading timeout - please try again');
+      }
+    }, 10000);
+
+    return () => clearTimeout(maxLoadingTimeout);
+  }, [loading]);
 
   // Get formatted weekly progress text
   const getWeeklyProgressText = () => {
+    if (error) {
+      return "Error loading WNGS data";
+    }
     if (weeklyStats.currentWeekWings === 0) {
-      return "You've earned 0 $WNGS this week";
+      return "You've earned 0 WNGS this week";
     } else if (weeklyStats.currentWeekWings === 1) {
-      return "You've earned 1 $WNG this week";
+      return "You've earned 1 WNGS this week";
     } else {
-      return `You've earned ${weeklyStats.currentWeekWings} $WNGS this week`;
+      return `You've earned ${weeklyStats.currentWeekWings} WNGS this week`;
     }
   };
 
   return {
     weeklyStats,
     loading,
+    error,
     getWeeklyProgressText,
     refreshStats: loadWeeklyStats
   };
@@ -347,57 +433,32 @@ const ProgressFill = styled.div`
   width: ${({ value }) => value}%;
 `;
 
-const TestWingsButton = styled.button`
-  background: ${({ theme }) => theme.colors?.accent?.gold || gold};
-  color: ${({ theme }) => theme.colors?.background || '#000'};
-  border: none;
-  border-radius: 8px;
-  padding: 0.5rem 1rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  margin-left: auto;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(255,176,0,0.3);
-  }
-`;
+
 
 function HomeScreen() {
   const [showDailiesModal, setShowDailiesModal] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { awardPassportStamp, hasStamp } = useStamps();
 
   // Use the weekly wings hook
-  const { weeklyStats, loading, getWeeklyProgressText } = useWeeklyWings(user?.id);
+  const { weeklyStats, loading, error, getWeeklyProgressText, refreshStats } = useWeeklyWings(user?.id);
 
-  // Test function to award wings
-  const handleTestWings = async () => {
-    if (!user) {
-      alert('Please log in to earn WINGS');
-      return;
-    }
+  // Award passport stamp on first visit
+  useEffect(() => {
+    const awardWelcomeStamp = async () => {
+      if (user && !hasStamp('received_passport')) {
+        try {
+          await awardPassportStamp();
+          console.log('🏅 Welcome to Monarch! Passport stamp awarded!');
+        } catch (error) {
+          console.warn('Failed to award passport stamp:', error);
+        }
+      }
+    };
 
-    try {
-      // Add 25 test wings
-      const { data, error } = await supabase.rpc('add_wings_to_user', {
-        user_id_param: user.id,
-        wings_amount: 25,
-        transaction_type_param: 'test_reward',
-        description_param: 'Test wings from home screen',
-        reference_id_param: 'test_' + Date.now()
-      });
-
-      if (error) throw error;
-
-      alert(`🎉 +25 WINGS earned! New balance: ${data.new_balance}`);
-    } catch (error) {
-      console.error('Error awarding test wings:', error);
-      alert('Error awarding wings: ' + error.message);
-    }
-  };
+    awardWelcomeStamp();
+  }, [user, hasStamp, awardPassportStamp]);
 
   // Example quest progress data
   const questProgress = [
@@ -447,11 +508,6 @@ function HomeScreen() {
         <Subtext>
           <WingsIcon>💰</WingsIcon>
           {loading ? 'Loading...' : getWeeklyProgressText()}
-          {process.env.NODE_ENV === 'development' && (
-            <TestWingsButton onClick={handleTestWings}>
-              +25 Test
-            </TestWingsButton>
-          )}
         </Subtext>
       </Header>
 
@@ -547,10 +603,13 @@ function HomeScreen() {
         </HalfCard>
       </BottomRow>
 
-      <DailiesModal 
-        isOpen={showDailiesModal} 
-        onClose={() => setShowDailiesModal(false)} 
-      />
+      {showDailiesModal && (
+        <DailiesModal
+          isOpen={showDailiesModal}
+          onClose={() => setShowDailiesModal(false)}
+          onQuestComplete={refreshStats}
+        />
+      )}
     </Container>
   );
 }

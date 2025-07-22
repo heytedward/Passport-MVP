@@ -71,12 +71,7 @@ const ProfileName = styled.div`
   margin-bottom: 4px;
 `;
 
-const ProfileEmail = styled.div`
-  font-family: ${({ theme }) => theme.typography.fontFamily.body};
-  color: ${({ theme }) => theme.colors.text.secondary};
-  font-size: 1rem;
-  margin-bottom: 8px;
-`;
+
 
 const BalanceCard = styled(GlassCard)`
   flex: 1;
@@ -620,6 +615,11 @@ function ProfileScreen() {
             .eq('id', user.id)
             .single();
 
+          if (error && error.code !== 'PGRST116') {
+            // Real error (not just "not found")
+            console.error('Error fetching profile:', error);
+          }
+
           if (userProfile) {
             setProfile({
               name: userProfile.username || user.user_metadata?.username || user.email?.split('@')[0],
@@ -661,14 +661,47 @@ function ProfileScreen() {
       }
       setLoading(false);
     };
+
     fetchProfile();
+
+    // Real-time subscriptions temporarily disabled due to React Strict Mode conflicts
+    // Will re-enable with proper singleton pattern later
+    // 
+    // if (user) {
+    //   const supabase = createClient(
+    //     process.env.REACT_APP_SUPABASE_URL,
+    //     process.env.REACT_APP_SUPABASE_ANON_KEY
+    //   );
+
+    //   const channelName = `profile_updates_${user.id}`;
+    //   const subscription = supabase
+    //     .channel(channelName)
+    //     .on('postgres_changes', {
+    //       event: 'UPDATE',
+    //       schema: 'public',
+    //       table: 'user_profiles',
+    //       filter: `id=eq.${user.id}`
+    //     }, (payload) => {
+    //       console.log('Profile updated via real-time (Profile):', payload);
+    //       setProfile(prev => prev ? {
+    //         ...prev,
+    //         totalWings: payload.new.wings_balance || 0,
+    //         level: Math.floor((payload.new.wings_balance || 0) / 100) + 1,
+    //       } : prev);
+    //     })
+    //     .subscribe();
+
+    //   return () => {
+    //     subscription.unsubscribe();
+    //   };
+    // }
   }, [user]);
 
   const balance = 0;
   const transactions = [
-    { type: 'Scan Quest Earn', amount: '+15 WNGS', positive: true, status: 'Completed', date: 'Mar 18, 2025' },
-    { type: 'Shop Purchase', amount: '-25 WNGS', positive: false, status: 'Completed', date: 'Mar 15, 2025' },
-    { type: 'Daily Reward', amount: '+5 WNGS', positive: true, status: 'Completed', date: 'Mar 14, 2025' },
+    { type: 'Scan Quest Earn', amount: '+75 WNGS', positive: true, status: 'Completed', date: 'Mar 18, 2025' },
+    { type: 'Shop Purchase', amount: '-50 WNGS', positive: false, status: 'Completed', date: 'Mar 15, 2025' },
+    { type: 'Daily Reward', amount: '+35 WNGS', positive: true, status: 'Completed', date: 'Mar 14, 2025' },
   ];
   const progress = [
     { color: theme.colors.secondary, value: 60 },
@@ -688,7 +721,6 @@ function ProfileScreen() {
           <ProfileName>
             {user?.user_metadata?.username || user?.email?.split('@')[0] || 'User'}
           </ProfileName>
-          <ProfileEmail>{user?.email || 'Not logged in'}</ProfileEmail>
         </ProfileHeader>
         <BalanceCard>
           <BalanceLabel>WNGS Balance</BalanceLabel>
@@ -707,7 +739,7 @@ function ProfileScreen() {
             </ReferralContent>
             <ReferralMeta>
               <ReferralStatus>Completed</ReferralStatus>
-              <ReferralReward>+50 WINGS</ReferralReward>
+                              <ReferralReward>+50 WNGS</ReferralReward>
             </ReferralMeta>
           </ReferralItem>
           <ReferralItem>
@@ -718,7 +750,7 @@ function ProfileScreen() {
             </ReferralContent>
             <ReferralMeta>
               <ReferralStatus>Completed</ReferralStatus>
-              <ReferralReward>+25 WINGS</ReferralReward>
+                              <ReferralReward>+25 WNGS</ReferralReward>
             </ReferralMeta>
           </ReferralItem>
         </ReferralList>

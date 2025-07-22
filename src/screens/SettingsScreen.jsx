@@ -285,10 +285,13 @@ const SettingsScreen = ({ themeMode = 'dark', onToggleTheme = () => {}, gradient
 
   const handleLogout = async () => {
     try {
+      console.log('Starting sign out process...');
       await signOut();
+      console.log('Sign out successful, navigating to home...');
       navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);
+      alert('Failed to sign out. Please try again.');
     }
   };
 
