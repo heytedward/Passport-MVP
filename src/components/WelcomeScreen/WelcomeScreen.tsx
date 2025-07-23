@@ -195,7 +195,7 @@ const ScanIcon = styled.div`
 const WelcomeScreen: React.FC = () => {
   return (
     <Container>
-      <Title>Monarch Passport</Title>
+      <Title>Find Your Wings</Title>
       <Tagline>Find Your Wings. Leave a Mark.</Tagline>
       
       <ButtonContainer>

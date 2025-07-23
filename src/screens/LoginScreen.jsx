@@ -283,7 +283,7 @@ const LoginScreen = () => {
   return (
     <LoginContainer>
       <LoginCard>
-        <Title>🦋 Monarch</Title>
+        <Title>🦋 Find Your Wings</Title>
         <Subtitle>
           {isSignUp ? 'Create your account to start collecting' : 'Welcome back to your digital passport'}
         </Subtitle>

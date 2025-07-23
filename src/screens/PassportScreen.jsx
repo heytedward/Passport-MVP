@@ -230,7 +230,7 @@ const PassportScreen = () => {
       <PassportBook>
         <PassportHeader>
           <SeasonTitle>Fall 2025 - Digital Genesis</SeasonTitle>
-          <PassportTitle>Monarch Passport</PassportTitle>
+          <PassportTitle>Find Your Wings</PassportTitle>
           <PassportSubtitle>
             {user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Collector'}
           </PassportSubtitle>

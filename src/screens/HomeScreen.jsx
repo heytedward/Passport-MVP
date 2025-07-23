@@ -593,18 +593,49 @@ function HomeScreen() {
         </HalfCard>
         <HalfCard onClick={() => navigate('/season-roadmap')} aria-label="View Season Roadmap" style={{ cursor: 'pointer' }}>
           <HalfCardContent>
-            <ProgressText>Season Roadmap</ProgressText>
-            <ProgressSub>Spring '25 ends in:</ProgressSub>
-            <CountdownNumber>
-              <CountdownIcon>🗓️</CountdownIcon>
-              <LiveCountdown 
-                targetDate={new Date('2025-09-07T12:00:00')} 
-                size="1.2rem"
-                showLabels={false}
-                showSeconds={false}
-              />
-            </CountdownNumber>
-            <CardSub>View Roadmap</CardSub>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <div style={{ flex: 1 }}>
+                <ProgressText>Digital Genesis</ProgressText>
+                <ProgressSub>Spring '25</ProgressSub>
+              </div>
+              <div style={{ 
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                marginLeft: '90px'
+              }}>
+                <div style={{ 
+                  fontSize: '2.5rem', 
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '80px',
+                  height: '80px',
+                  background: 'rgba(255, 176, 0, 0.1)',
+                  border: '2px solid rgba(255, 176, 0, 0.3)',
+                  borderRadius: '12px',
+                  marginBottom: '0.5rem',
+                  color: '#FFB000',
+                  fontWeight: '700'
+                }}>
+                  <LiveCountdown 
+                    targetDate={new Date('2025-09-07T12:00:00')} 
+                    size="2.5rem"
+                    showLabels={false}
+                    showSeconds={false}
+                    showHours={false}
+                    showMinutes={false}
+                  />
+                </div>
+                <div style={{ 
+                  fontSize: '0.8rem', 
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  textAlign: 'center'
+                }}>
+                  Days Left
+                </div>
+              </div>
+            </div>
           </HalfCardContent>
         </HalfCard>
       </BottomRow>

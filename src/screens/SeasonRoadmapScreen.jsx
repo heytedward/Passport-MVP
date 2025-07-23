@@ -6,9 +6,13 @@ import LiveCountdown from '../components/LiveCountdown';
 const Container = styled.div`
   min-height: 100vh;
   background: linear-gradient(135deg, #000000 0%, #1a1a2e 50%, #16213e 100%);
-  padding: 1rem;
+  padding: 0.5rem 0.5rem 6rem 0.5rem;
   position: relative;
   overflow-x: hidden;
+  
+  @media (min-width: 768px) {
+    padding: 1rem 1rem 6rem 1rem;
+  }
   
   &::before {
     content: '';
@@ -28,15 +32,24 @@ const BackButton = styled.button`
   background: rgba(255, 176, 0, 0.1);
   border: 1px solid #FFB000;
   color: #FFB000;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
   cursor: pointer;
   backdrop-filter: blur(10px);
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   font-family: 'Space Grotesk', sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
   transition: all 0.3s ease;
+  min-height: 44px;
+  touch-action: manipulation;
 
-  &:hover {
+  @media (min-width: 768px) {
+    margin-bottom: 2rem;
+    padding: 0.5rem 1rem;
+  }
+
+  &:hover, &:active {
     background: rgba(255, 176, 0, 0.2);
     transform: translateY(-1px);
   }
@@ -47,17 +60,27 @@ const RoadmapContainer = styled.div`
   margin: 0 auto;
   position: relative;
   z-index: 1;
+  padding: 0 0.5rem;
+  
+  @media (min-width: 768px) {
+    padding: 0;
+  }
 `;
 
 const ScreenTitle = styled.h1`
   font-family: 'Outfit', sans-serif;
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
   color: #FFFFFF;
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   text-shadow: 0 0 20px rgba(255, 176, 0, 0.3);
   position: relative;
+  
+  @media (min-width: 768px) {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+  }
   
   &::after {
     content: '';
@@ -65,22 +88,34 @@ const ScreenTitle = styled.h1`
     bottom: -10px;
     left: 50%;
     transform: translateX(-50%);
-    width: 100px;
+    width: 80px;
     height: 3px;
     background: linear-gradient(90deg, transparent, #FFB000, transparent);
     border-radius: 2px;
+    
+    @media (min-width: 768px) {
+      width: 100px;
+    }
   }
 `;
 
 const SeasonSelector = styled.div`
   display: flex;
-  gap: 0.75rem;
-  margin-bottom: 2.5rem;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
   overflow-x: auto;
-  padding: 1rem 0;
-  justify-content: center;
+  padding: 0.5rem 0;
+  justify-content: flex-start;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  
+  @media (min-width: 768px) {
+    gap: 0.75rem;
+    margin-bottom: 2.5rem;
+    padding: 1rem 0;
+    justify-content: center;
+  }
   
   &::-webkit-scrollbar {
     display: none;
@@ -97,21 +132,30 @@ const SeasonTab = styled.button`
   color: ${props => props.active 
     ? '#FFFFFF' 
     : 'rgba(255, 255, 255, 0.6)'};
-  padding: 1rem 2rem;
-  border-radius: 25px;
+  padding: 0.75rem 1.5rem;
+  border-radius: 20px;
   cursor: ${props => props.locked ? 'not-allowed' : 'pointer'};
   backdrop-filter: blur(15px);
   white-space: nowrap;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-weight: ${props => props.active ? '700' : '500'};
   font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.9rem;
   opacity: ${props => props.locked ? '0.4' : '1'};
   position: relative;
   box-shadow: ${props => props.active 
     ? '0 8px 25px rgba(255, 176, 0, 0.3)' 
     : '0 4px 15px rgba(0, 0, 0, 0.2)'};
+  min-height: 44px;
+  touch-action: manipulation;
 
-  &:hover {
+  @media (min-width: 768px) {
+    padding: 1rem 2rem;
+    border-radius: 25px;
+    font-size: 1rem;
+  }
+
+  &:hover, &:active {
     background: ${props => !props.locked && 'linear-gradient(135deg, rgba(255, 176, 0, 0.2), rgba(255, 176, 0, 0.05))'};
     transform: ${props => !props.locked ? 'translateY(-2px) scale(1.02)' : 'none'};
     box-shadow: ${props => !props.locked && '0 12px 30px rgba(255, 176, 0, 0.2)'};
@@ -132,9 +176,9 @@ const SeasonTab = styled.button`
 
 const RoadmapCard = styled.div`
   background: linear-gradient(135deg, rgba(30,30,40,0.95) 0%, rgba(76,28,140,0.15) 100%);
-  border-radius: 24px;
-  padding: 3rem;
-  margin-bottom: 2rem;
+  border-radius: 20px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
   box-shadow: 
     0 0 32px 0 rgba(255,176,0,0.25), 
     0 0 24px 0 rgba(255,176,0,0.15),
@@ -143,6 +187,12 @@ const RoadmapCard = styled.div`
   backdrop-filter: blur(25px);
   position: relative;
   overflow: hidden;
+  
+  @media (min-width: 768px) {
+    border-radius: 24px;
+    padding: 2.5rem;
+    margin-bottom: 1.5rem;
+  }
   
   &::before {
     content: '';
@@ -157,10 +207,15 @@ const RoadmapCard = styled.div`
 
 const SeasonHeader = styled.div`
   text-align: center;
-  margin-bottom: 3rem;
-  padding-bottom: 2rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
   border-bottom: 2px solid rgba(255, 176, 0, 0.3);
   position: relative;
+  
+  @media (min-width: 768px) {
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+  }
   
   &::after {
     content: '';
@@ -168,9 +223,13 @@ const SeasonHeader = styled.div`
     bottom: -2px;
     left: 50%;
     transform: translateX(-50%);
-    width: 150px;
+    width: 120px;
     height: 2px;
     background: linear-gradient(90deg, transparent, #FFB000, transparent);
+    
+    @media (min-width: 768px) {
+      width: 150px;
+    }
   }
 `;
 
@@ -206,8 +265,12 @@ const CountdownSection = styled.div`
   background: linear-gradient(135deg, rgba(255, 176, 0, 0.1), rgba(76, 28, 140, 0.1));
   border-radius: 16px;
   border: 2px solid rgba(255, 176, 0, 0.3);
-  margin: 2rem 0;
+  margin: 1.5rem 0;
   box-shadow: 0 8px 25px rgba(255, 176, 0, 0.15);
+  
+  @media (min-width: 768px) {
+    margin: 2rem 0;
+  }
 `;
 
 const CountdownLabel = styled.div`
@@ -226,7 +289,11 @@ const CountdownContainer = styled.div`
 `;
 
 const Section = styled.div`
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+  
+  @media (min-width: 768px) {
+    margin-bottom: 2rem;
+  }
 `;
 
 const SectionTitle = styled.h3`
@@ -242,21 +309,30 @@ const SectionTitle = styled.h3`
 
 const DropGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1rem;
   margin-bottom: 1.5rem;
+  
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
 `;
 
 const DropCard = styled.div`
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-  border-radius: 16px;
-  padding: 2rem;
+  border-radius: 12px;
+  padding: 1.5rem;
   border-left: 4px solid #FFB000;
   border: 1px solid rgba(255, 176, 0, 0.3);
   backdrop-filter: blur(15px);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  
+  @media (min-width: 768px) {
+    border-radius: 16px;
+    padding: 2rem;
+  }
   
   &::before {
     content: '';
@@ -270,7 +346,7 @@ const DropCard = styled.div`
     transition: opacity 0.3s ease;
   }
   
-  &:hover {
+  &:hover, &:active {
     transform: translateY(-3px);
     box-shadow: 0 12px 30px rgba(255, 176, 0, 0.2);
     
@@ -301,20 +377,29 @@ const DropItem = styled.li`
 
 const QuestGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1rem;
+  
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
 `;
 
 const QuestCard = styled.div`
   background: linear-gradient(135deg, #FFB000, #FF9F1C);
-  border-radius: 16px;
-  padding: 2rem;
+  border-radius: 12px;
+  padding: 1.5rem;
   color: #000000;
   border: 2px solid #FFB000;
   box-shadow: 0 8px 25px rgba(255, 176, 0, 0.3);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  
+  @media (min-width: 768px) {
+    border-radius: 16px;
+    padding: 2rem;
+  }
   
   &::before {
     content: '';
@@ -328,7 +413,7 @@ const QuestCard = styled.div`
     transition: opacity 0.3s ease;
   }
   
-  &:hover {
+  &:hover, &:active {
     transform: translateY(-4px) scale(1.02);
     box-shadow: 0 15px 35px rgba(255, 176, 0, 0.4);
     
@@ -593,6 +678,28 @@ const SeasonRoadmapScreen = () => {
             </div>
           )}
         </RoadmapCard>
+        
+        {/* End of content indicator */}
+        <div style={{
+          textAlign: 'center',
+          padding: '2rem 0',
+          marginTop: '1rem'
+        }}>
+          <div style={{
+            width: '60px',
+            height: '4px',
+            background: 'linear-gradient(90deg, transparent, rgba(255, 176, 0, 0.5), transparent)',
+            borderRadius: '2px',
+            margin: '0 auto 1rem auto'
+          }}></div>
+          <div style={{
+            fontSize: '0.9rem',
+            color: 'rgba(255, 255, 255, 0.5)',
+            fontFamily: 'Space Grotesk, sans-serif'
+          }}>
+            End of Roadmap
+          </div>
+        </div>
       </RoadmapContainer>
     </Container>
   );
