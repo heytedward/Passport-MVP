@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../hooks/useAuth';
 import { useStamps } from '../hooks/useStamps';
 import DailiesModal from '../components/DailiesModal';
+import LiveCountdown from '../components/LiveCountdown';
 
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
@@ -596,7 +597,12 @@ function HomeScreen() {
             <ProgressSub>Spring '25 ends in:</ProgressSub>
             <CountdownNumber>
               <CountdownIcon>🗓️</CountdownIcon>
-              {weeklyStats.daysLeftInWeek > 0 ? `${weeklyStats.daysLeftInWeek} Days` : '23 Days'}
+              <LiveCountdown 
+                targetDate={new Date('2025-09-07T12:00:00')} 
+                size="1.2rem"
+                showLabels={false}
+                showSeconds={false}
+              />
             </CountdownNumber>
             <CardSub>View Roadmap</CardSub>
           </HalfCardContent>
