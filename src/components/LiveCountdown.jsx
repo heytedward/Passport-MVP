@@ -27,7 +27,6 @@ const CountdownNumber = styled.div`
   font-weight: 700;
   color: ${({ theme }) => theme.colors?.accent?.gold || '#FFB000'};
   text-shadow: 0 0 10px rgba(255, 176, 0, 0.3);
-  animation: ${pulse} 2s ease-in-out infinite;
 `;
 
 const CountdownLabel = styled.div`
@@ -43,8 +42,6 @@ const CountdownSeparator = styled.div`
   font-weight: 700;
   color: ${({ theme }) => theme.colors?.accent?.gold || '#FFB000'};
   margin: 0 0.2rem;
-  animation: ${pulse} 2s ease-in-out infinite;
-  animation-delay: 0.5s;
 `;
 
 const LiveCountdown = ({ 
@@ -52,6 +49,8 @@ const LiveCountdown = ({
   size = '1.2rem', 
   showLabels = true, 
   showSeconds = true,
+  showHours = true,
+  showMinutes = true,
   onComplete 
 }) => {
   const [timeLeft, setTimeLeft] = useState({
@@ -100,19 +99,27 @@ const LiveCountdown = ({
         {showLabels && <CountdownLabel>Days</CountdownLabel>}
       </CountdownSegment>
       
-      <CountdownSeparator size={size}>:</CountdownSeparator>
+      {showHours && (
+        <>
+          <CountdownSeparator size={size}>:</CountdownSeparator>
+          
+          <CountdownSegment>
+            <CountdownNumber size={size}>{formatNumber(timeLeft.hours)}</CountdownNumber>
+            {showLabels && <CountdownLabel>Hours</CountdownLabel>}
+          </CountdownSegment>
+        </>
+      )}
       
-      <CountdownSegment>
-        <CountdownNumber size={size}>{formatNumber(timeLeft.hours)}</CountdownNumber>
-        {showLabels && <CountdownLabel>Hours</CountdownLabel>}
-      </CountdownSegment>
-      
-      <CountdownSeparator size={size}>:</CountdownSeparator>
-      
-      <CountdownSegment>
-        <CountdownNumber size={size}>{formatNumber(timeLeft.minutes)}</CountdownNumber>
-        {showLabels && <CountdownLabel>Mins</CountdownLabel>}
-      </CountdownSegment>
+      {showMinutes && (
+        <>
+          <CountdownSeparator size={size}>:</CountdownSeparator>
+          
+          <CountdownSegment>
+            <CountdownNumber size={size}>{formatNumber(timeLeft.minutes)}</CountdownNumber>
+            {showLabels && <CountdownLabel>Mins</CountdownLabel>}
+          </CountdownSegment>
+        </>
+      )}
       
       {showSeconds && (
         <>

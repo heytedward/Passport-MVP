@@ -77,7 +77,7 @@ const WelcomeScreen = () => {
   return (
     <WelcomeContainer>
       <HeroCard>
-        <Title>Monarch Passport</Title>
+        <Title>Find Your Wings</Title>
         <Subtitle>
           Your digital passport to exclusive experiences. Join us on a journey
           of discovery and connection.
