@@ -230,6 +230,34 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen && user && !isInitializedRef.current) {
       fetchAllActivities();
+    } else if (isOpen && user && isInitializedRef.current && allActivities.length === 0) {
+      // If modal opens but no activities loaded, try again
+      console.log('🔄 Modal opened but no activities, retrying...');
+      isInitializedRef.current = false;
+      fetchAllActivities();
+    } else if (isOpen && !user) {
+      // If no user, show mock data immediately
+      console.log('👤 No user, showing mock data immediately');
+      const mockActivities = [
+        {
+          id: 1,
+          activity_type: 'scan',
+          activity_title: 'QR Code Scanned',
+          activity_description: 'Scanned QR code at Coffee Shop Downtown',
+          wings_earned: 35,
+          activity_date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 2,
+          activity_type: 'quest',
+          activity_title: 'Daily Quest Completed',
+          activity_description: 'Completed "Morning Scan Challenge"',
+          wings_earned: 75,
+          activity_date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+        }
+      ];
+      setAllActivities(mockActivities);
+      setLoading(false);
     }
   }, [isOpen, user]);
 
@@ -257,6 +285,7 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
       return;
     }
 
+    console.log('🚀 Starting fetchAllActivities...');
     isProcessingRef.current = true;
     setLoading(true);
     
@@ -268,6 +297,8 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
         console.log('⚠️ Supabase environment variables not configured, using mock data');
         throw new Error('Supabase not configured');
       }
+      
+      console.log('🔍 Supabase configured, attempting database query...');
       
       const { data, error } = await supabase
         .from('user_activity')
@@ -391,6 +422,34 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
           activity_title: 'Friend Joined',
           activity_description: 'Your friend Alex joined using your referral code',
           wings_earned: 150,
+          activity_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 5,
+          activity_type: 'event',
+          activity_title: 'Special Event Participation',
+          activity_description: 'Participated in "Weekend Warrior" event',
+          wings_earned: 150,
+          activity_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 6,
+          activity_type: 'scan',
+          activity_title: 'QR Code Scanned',
+          activity_description: 'Scanned QR code at Retail Store Plaza',
+          wings_earned: 35,
+          activity_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+        }
+      ];
+      
+      console.log('📊 Setting mock activities:', mockActivities.length);
+      setAllActivities(mockActivities);
+      isInitializedRef.current = true;
+    } finally {
+      console.log('✅ fetchAllActivities completed, setting loading to false');
+      setLoading(false);
+      isProcessingRef.current = false;
+    }
           activity_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
         },
         {
