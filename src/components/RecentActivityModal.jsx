@@ -450,32 +450,6 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
       setLoading(false);
       isProcessingRef.current = false;
     }
-          activity_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: 5,
-          activity_type: 'event',
-          activity_title: 'Special Event Participation',
-          activity_description: 'Participated in "Weekend Warrior" event',
-          wings_earned: 150,
-          activity_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: 6,
-          activity_type: 'scan',
-          activity_title: 'QR Code Scanned',
-          activity_description: 'Scanned QR code at Retail Store Plaza',
-          wings_earned: 35,
-          activity_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-        }
-      ];
-      
-      setAllActivities(mockActivities);
-      isInitializedRef.current = true;
-    } finally {
-      setLoading(false);
-      isProcessingRef.current = false;
-    }
   }, [user]);
 
   const filterActivities = useCallback(() => {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import LiveCountdown from '../components/LiveCountdown';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -194,6 +195,34 @@ const SeasonDates = styled.p`
   font-weight: 600;
   margin: 0.5rem 0 0 0;
   font-family: 'Space Grotesk', sans-serif;
+`;
+
+const CountdownSection = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(255, 176, 0, 0.1), rgba(76, 28, 140, 0.1));
+  border-radius: 16px;
+  border: 2px solid rgba(255, 176, 0, 0.3);
+  margin: 2rem 0;
+  box-shadow: 0 8px 25px rgba(255, 176, 0, 0.15);
+`;
+
+const CountdownLabel = styled.div`
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+  text-align: center;
+`;
+
+const CountdownContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
 `;
 
 const Section = styled.div`
@@ -448,6 +477,17 @@ const SeasonRoadmapScreen = () => {
             <SeasonDates>{currentSeason.dates}</SeasonDates>
           </SeasonHeader>
 
+          <CountdownSection>
+            <CountdownContainer>
+              <CountdownLabel>Season ends in:</CountdownLabel>
+              <LiveCountdown 
+                targetDate={new Date('2025-09-07T12:00:00')} 
+                size="1.5rem"
+                showSeconds={true}
+              />
+            </CountdownContainer>
+          </CountdownSection>
+
           {!currentSeason.locked ? (
             <>
               <Section>
@@ -522,6 +562,23 @@ const SeasonRoadmapScreen = () => {
               <p style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>
                 This season will be unlocked when Spring 2025 ends.
               </p>
+              <div style={{ 
+                background: 'rgba(255, 176, 0, 0.1)',
+                padding: '1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 176, 0, 0.3)',
+                marginTop: '1rem',
+                marginBottom: '1rem'
+              }}>
+                <div style={{ fontSize: '0.9rem', opacity: 0.8, marginBottom: '0.5rem' }}>
+                  Unlocks in:
+                </div>
+                <LiveCountdown 
+                  targetDate={new Date('2025-09-07T12:00:00')} 
+                  size="1rem"
+                  showSeconds={false}
+                />
+              </div>
               <div style={{ 
                 background: 'rgba(255, 176, 0, 0.1)',
                 padding: '1rem',

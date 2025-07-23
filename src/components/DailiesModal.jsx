@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../hooks/useAuth';
 import { useStamps } from '../hooks/useStamps';
 import GlassCard from './GlassCard';
+import LiveCountdown from './LiveCountdown';
 
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
@@ -53,9 +54,28 @@ const ModalHeader = styled.div`
 const ModalTitle = styled.h2`
   font-family: ${({ theme }) => theme.typography.fontFamily.heading};
   color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0 0 24px 0;
+  margin: 0 0 16px 0;
   font-size: ${({ theme }) => theme.typography.fontSize.h2};
   font-weight: ${({ theme }) => theme.typography.fontWeight.bold};
+`;
+
+const CountdownSection = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 16px;
+  background: rgba(255, 176, 0, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 176, 0, 0.2);
+  margin-bottom: 16px;
+`;
+
+const CountdownLabel = styled.div`
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-weight: 500;
 `;
 
 const ModalBody = styled.div`
@@ -453,6 +473,14 @@ const DailiesModal = ({ isOpen, onClose, onQuestComplete }) => {
         
         <ModalHeader>
           <ModalTitle>Daily Social Quests</ModalTitle>
+          <CountdownSection>
+            <CountdownLabel>Next reset in:</CountdownLabel>
+            <LiveCountdown 
+              targetDate={new Date().setHours(24, 0, 0, 0)} 
+              size="1rem"
+              showSeconds={false}
+            />
+          </CountdownSection>
         </ModalHeader>
 
         <ModalBody>
