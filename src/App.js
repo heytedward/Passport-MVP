@@ -8,10 +8,12 @@ import GlobalStyle from './styles/GlobalStyle';
 
 import { useAuth, AuthProvider } from './hooks/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
+import BetaGate from './components/BetaGate';
 
 import WelcomeScreen from './screens/WelcomeScreen';
 import HomeScreen from './screens/HomeScreen';
 import PassportScreen from './screens/PassportScreen';
+import SeasonRoadmapScreen from './screens/SeasonRoadmapScreen';
 import ScanScreen from './screens/ScanScreen';
 import ClosetScreen from './screens/ClosetScreen';
 import ProfileScreen from './screens/ProfileScreen';
@@ -76,27 +78,31 @@ function App() {
     <AuthProvider>
       <ThemeProvider theme={currentTheme}>
         <GlobalStyle />
-        <AppContainer>
-        <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname}>
-            <Route path="/*" element={<HomeScreen />} />
-            <Route path="/passport" element={<PassportScreen />} />
-            <Route path="/scan" element={<ScanScreen />} />
-            <Route path="/closet" element={<ClosetScreen />} />
-            <Route path="/profile" element={<ProfileScreen />} />
-            <Route path="/settings" element={<SettingsScreen themeMode={themeMode} onToggleTheme={toggleTheme} />} />
-            <Route path="/quests" element={<QuestsScreen />} />
-            <Route path="/login" element={<LoginScreen />} />
-            <Route path="/generate-qr" element={<CircularQRGenerator />} />
-            <Route element={<ProtectedRoute />}>
-              <Route path="/admin" element={<AdminScreen />} />
-            </Route>
-          </Routes>
-        </AnimatePresence>
-        
-        <NavBar />
-      </AppContainer>
-    </ThemeProvider>
+        <BetaGate>
+          <AppContainer>
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
+              <Route path="/join/:referralCode" element={<LoginScreen />} />
+              <Route path="/*" element={<HomeScreen />} />
+              <Route path="/passport" element={<PassportScreen />} />
+              <Route path="/season-roadmap" element={<SeasonRoadmapScreen />} />
+              <Route path="/scan" element={<ScanScreen />} />
+              <Route path="/closet" element={<ClosetScreen />} />
+              <Route path="/profile" element={<ProfileScreen />} />
+              <Route path="/settings" element={<SettingsScreen themeMode={themeMode} onToggleTheme={toggleTheme} />} />
+              <Route path="/quests" element={<QuestsScreen />} />
+              <Route path="/login" element={<LoginScreen />} />
+              <Route path="/generate-qr" element={<CircularQRGenerator />} />
+              <Route element={<ProtectedRoute />}>
+                <Route path="/admin" element={<AdminScreen />} />
+              </Route>
+            </Routes>
+          </AnimatePresence>
+          
+          <NavBar />
+        </AppContainer>
+        </BetaGate>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

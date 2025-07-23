@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../hooks/useAuth';
+import { useReferrals } from '../hooks/useReferrals';
 import GlassCard from '../components/GlassCard';
 import GlowButton from '../components/GlowButton';
 
@@ -126,7 +127,9 @@ const SuccessMessage = styled.div`
 const LoginScreen = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const { processReferralSignup } = useReferrals();
   const [isSignUp, setIsSignUp] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -143,6 +146,20 @@ const LoginScreen = () => {
       navigate('/');
     }
   }, [user, loading, navigate]);
+
+  // Check for referral code in URL
+  useEffect(() => {
+    // Check if we came from a referral link
+    const pathParts = window.location.pathname.split('/');
+    if (pathParts[1] === 'join' && pathParts[2]) {
+      const code = pathParts[2].toUpperCase();
+      setReferralCode(code);
+      setIsSignUp(true); // Switch to signup mode
+      
+      // Show referral message
+      setSuccess(`Welcome! You're joining via referral code: ${code}`);
+    }
+  }, []);
 
   const handleInputChange = (e) => {
     setFormData({
@@ -214,14 +231,23 @@ const LoginScreen = () => {
         options: {
           data: {
             username: formData.username,
-            full_name: formData.username
+            full_name: formData.username,
+            referral_code: referralCode || null
           }
         }
       });
 
       if (error) throw error;
       
-      if (data.user && !data.user.email_confirmed_at) {
+      // Process referral if there's a code and user was created
+      if (referralCode && data.user) {
+        const referralResult = await processReferralSignup(referralCode, data.user.id);
+        if (referralResult.success) {
+          setSuccess(`Account created! You earned ${referralResult.bonusAmount} WINGS for joining via referral. Check your email to confirm your account.`);
+        } else {
+          setSuccess('Account created! Please check your email to confirm your account.');
+        }
+      } else if (data.user && !data.user.email_confirmed_at) {
         setSuccess('Account created! Please check your email to confirm your account.');
       } else {
         setSuccess('Account created successfully! Redirecting...');
@@ -277,6 +303,25 @@ const LoginScreen = () => {
                   value={formData.username}
                   onChange={handleInputChange}
                 />
+              </InputGroup>
+            )}
+
+            {isSignUp && (
+              <InputGroup>
+                <Label>Referral Code (Optional)</Label>
+                <Input
+                  type="text"
+                  name="referralCode"
+                  placeholder="Enter referral code"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  style={{ textTransform: 'uppercase' }}
+                />
+                {referralCode && (
+                  <div style={{ fontSize: '0.8rem', color: '#2ecc71', marginTop: '0.25rem' }}>
+                    ✓ You'll earn 25 WINGS for joining + 25 more for your first scan!
+                  </div>
+                )}
               </InputGroup>
             )}
             

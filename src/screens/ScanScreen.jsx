@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../hooks/useAuth';
 import { useStamps } from '../hooks/useStamps';
+import { useReferrals } from '../hooks/useReferrals';
 // Circular QR imports commented out for now
 // import { detectCircularQR } from '../utils/circularQRDetection';
 // import { validateSecureCircularQR, decryptCircularQR } from '../utils/secureCircularQR';
@@ -307,6 +308,7 @@ const ScanScreen = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { awardQRStamp, awardFirstItemStamp, awardStyleStamp, hasStamp } = useStamps();
+  const { completeReferral } = useReferrals();
   const [isScanning, setIsScanning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [cameraInitialized, setCameraInitialized] = useState(false);
@@ -899,7 +901,18 @@ const ScanScreen = () => {
         console.warn('⚠️ Failed to award stamps (non-critical):', stampError);
       }
 
-      console.log('🔍 Step 8: Showing reward modal...');
+      console.log('🔍 Step 8: Checking referral completion...');
+      // Complete referral if this is the user's first successful scan
+      try {
+        const referralResult = await completeReferral(user.id);
+        if (referralResult.success) {
+          console.log('✅ Referral completed! Referrer earned:', referralResult.referrerReward, 'WINGS');
+        }
+      } catch (referralError) {
+        console.warn('⚠️ Failed to check referral completion (non-critical):', referralError);
+      }
+
+      console.log('🔍 Step 9: Showing reward modal...');
       // Show reward modal
       setReward({
         ...rewardData,

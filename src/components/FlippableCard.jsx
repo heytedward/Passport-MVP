@@ -42,9 +42,9 @@ const CardFace = styled.div`
   align-items: center;
   justify-content: center;
   border-radius: 20px;
-  background: ${({ theme }) => theme.colors.glass.background}, rgba(255,255,255,0.13);
-  box-shadow: 0 0 32px 0 rgba(255,215,0,0.18), 0 0 24px 0 rgba(127,63,191,0.22);
-  border: 1.5px solid rgba(255,255,255,0.35);
+  background: linear-gradient(135deg, rgba(30,30,40,0.95) 0%, rgba(76,28,140,0.15) 100%);
+  box-shadow: 0 0 32px 0 rgba(255,176,0,0.25), 0 0 24px 0 rgba(255,176,0,0.15);
+  border: 2px solid #FFB000;
   padding: 32px 16px;
 `;
 
@@ -88,11 +88,28 @@ const FlippableCard = ({ emoji, date, season, rarity, onClose }) => {
             <div style={{ marginTop: 18, fontSize: '1.1rem', opacity: 0.7 }}>Tap or swipe to flip</div>
           </CardFront>
           <CardBack>
-            <div style={{ marginBottom: 18, fontWeight: 700, fontSize: '1.2rem' }}>Stamp Details</div>
-            <div><b>Date Earned:</b> {date}</div>
-            <div><b>Season:</b> {season}</div>
-            {rarity && <div><b>Rarity:</b> {rarity}</div>}
-            <div style={{ marginTop: 24, fontSize: '0.95rem', opacity: 0.7 }}>Tap or swipe to flip back</div>
+            <div style={{ marginBottom: 24, fontWeight: 700, fontSize: '1.3rem', textAlign: 'center' }}>How You Earned This</div>
+            <div style={{ marginBottom: 12 }}>
+              <span style={{ color: '#FFB000', fontWeight: 600 }}>Obtained:</span> 
+              <span style={{ marginLeft: 8 }}>Scanned QR at Papillon Store</span>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <span style={{ color: '#FFB000', fontWeight: 600 }}>Date:</span> 
+              <span style={{ marginLeft: 8 }}>{date}</span>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <span style={{ color: '#FFB000', fontWeight: 600 }}>Location:</span> 
+              <span style={{ marginLeft: 8 }}>NYC</span>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <span style={{ color: '#FFB000', fontWeight: 600 }}>Season:</span> 
+              <span style={{ marginLeft: 8 }}>{season}</span>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <span style={{ color: '#FFB000', fontWeight: 600 }}>WNGS:</span> 
+              <span style={{ marginLeft: 8, color: '#10B981' }}>+25</span>
+            </div>
+            <div style={{ marginTop: 32, fontSize: '0.9rem', opacity: 0.7, textAlign: 'center' }}>Tap to flip back</div>
           </CardBack>
         </Card>
       </Modal>
