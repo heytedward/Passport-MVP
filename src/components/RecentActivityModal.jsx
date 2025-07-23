@@ -263,6 +263,12 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
     try {
       console.log('🔍 Fetching all activities for user:', user.id);
       
+      // Check if Supabase is properly configured
+      if (!process.env.REACT_APP_SUPABASE_URL || !process.env.REACT_APP_SUPABASE_ANON_KEY) {
+        console.log('⚠️ Supabase environment variables not configured, using mock data');
+        throw new Error('Supabase not configured');
+      }
+      
       const { data, error } = await supabase
         .from('user_activity')
         .select('*')
@@ -350,16 +356,17 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
         isInitializedRef.current = true;
       }
     } catch (error) {
-      console.error('Error fetching activities:', error);
       console.error('❌ Error fetching activities:', error);
-      // Fallback to mock data on error
+      console.log('🔄 Falling back to mock data due to error');
+      
+      // Enhanced mock data with more variety
       const mockActivities = [
         {
           id: 1,
           activity_type: 'scan',
           activity_title: 'QR Code Scanned',
           activity_description: 'Scanned QR code at Coffee Shop Downtown',
-          wings_earned: 15,
+          wings_earned: 35,
           activity_date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
         },
         {
@@ -367,10 +374,43 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
           activity_type: 'quest',
           activity_title: 'Daily Quest Completed',
           activity_description: 'Completed "Morning Scan Challenge"',
-          wings_earned: 25,
+          wings_earned: 75,
           activity_date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 3,
+          activity_type: 'daily',
+          activity_title: 'Daily Login Bonus',
+          activity_description: 'Claimed daily login reward',
+          wings_earned: 35,
+          activity_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 4,
+          activity_type: 'referral',
+          activity_title: 'Friend Joined',
+          activity_description: 'Your friend Alex joined using your referral code',
+          wings_earned: 150,
+          activity_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 5,
+          activity_type: 'event',
+          activity_title: 'Special Event Participation',
+          activity_description: 'Participated in "Weekend Warrior" event',
+          wings_earned: 150,
+          activity_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 6,
+          activity_type: 'scan',
+          activity_title: 'QR Code Scanned',
+          activity_description: 'Scanned QR code at Retail Store Plaza',
+          wings_earned: 35,
+          activity_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
         }
       ];
+      
       setAllActivities(mockActivities);
       isInitializedRef.current = true;
     } finally {
