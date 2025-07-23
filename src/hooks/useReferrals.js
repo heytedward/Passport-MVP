@@ -80,6 +80,14 @@ export const useReferrals = () => {
     console.log('🔧 ensureReferralCode: Starting for user:', user.id);
 
     try {
+      // Check if Supabase is properly configured
+      if (!process.env.REACT_APP_SUPABASE_URL || !process.env.REACT_APP_SUPABASE_ANON_KEY) {
+        console.log('⚠️ Supabase environment variables not configured, generating fallback code');
+        const fallbackCode = generateReferralCode(user);
+        setReferralCode(fallbackCode);
+        return fallbackCode;
+      }
+
       console.log('🔍 Checking for existing referral code...');
       // Check if user already has a referral code
       const { data: existingCode, error: fetchError } = await supabase
