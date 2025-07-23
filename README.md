@@ -87,4 +87,4 @@ MIT License - see LICENSE file for details
 
 ---
 
-**Monarch Passport**: Where luxury fashion meets the future of digital experience. 
+**Monarch Passport**: Where luxury fashion meets the future of digital experience. # Vercel Redeploy Trigger - Wed Jul 23 11:52:55 EDT 2025
