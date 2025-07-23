@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../hooks/useAuth';
@@ -222,34 +222,60 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [allActivities, setAllActivities] = useState([]);
+  const isInitializedRef = useRef(false);
+  const isProcessingRef = useRef(false);
 
+  // Fetch all activities once when modal opens
   useEffect(() => {
-    if (isOpen && user) {
-      fetchActivities();
+    if (isOpen && user && !isInitializedRef.current) {
+      fetchAllActivities();
     }
-  }, [isOpen, user, activeFilter]);
+  }, [isOpen, user]);
 
-  const fetchActivities = async () => {
+  // Filter activities when filter changes (no re-fetch)
+  useEffect(() => {
+    if (allActivities.length > 0) {
+      filterActivities();
+    }
+  }, [activeFilter, allActivities]);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      isInitializedRef.current = false;
+      isProcessingRef.current = false;
+      setAllActivities([]);
+      setActivities([]);
+      setActiveFilter('all');
+    }
+  }, [isOpen]);
+
+  const fetchAllActivities = useCallback(async () => {
+    if (isProcessingRef.current) {
+      console.log('🔄 Already processing activities, skipping');
+      return;
+    }
+
+    isProcessingRef.current = true;
     setLoading(true);
+    
     try {
-      let query = supabase
+      console.log('🔍 Fetching all activities for user:', user.id);
+      
+      const { data, error } = await supabase
         .from('user_activity')
         .select('*')
         .eq('user_id', user.id)
         .order('activity_date', { ascending: false })
         .limit(50);
-
-      if (activeFilter !== 'all') {
-        query = query.eq('activity_type', activeFilter);
-      }
-
-      const { data, error } = await query;
       
       if (error) throw error;
       
-      // If no data from database, use mock data for demonstration
-      if (!data || data.length === 0) {
-        const mockActivities = [
+              // If no data from database, use mock data for demonstration
+        if (!data || data.length === 0) {
+          console.log('📊 No database data, using mock activities');
+          const mockActivities = [
           {
             id: 1,
             activity_type: 'scan',
@@ -316,17 +342,16 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
           }
         ];
         
-        // Filter mock data based on active filter
-        const filteredMockData = activeFilter === 'all' 
-          ? mockActivities 
-          : mockActivities.filter(activity => activity.activity_type === activeFilter);
-          
-        setActivities(filteredMockData);
+        setAllActivities(mockActivities);
+        isInitializedRef.current = true;
       } else {
-        setActivities(data);
+        console.log('✅ Database activities loaded:', data.length);
+        setAllActivities(data);
+        isInitializedRef.current = true;
       }
     } catch (error) {
       console.error('Error fetching activities:', error);
+      console.error('❌ Error fetching activities:', error);
       // Fallback to mock data on error
       const mockActivities = [
         {
@@ -346,11 +371,25 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
           activity_date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
         }
       ];
-      setActivities(mockActivities);
+      setAllActivities(mockActivities);
+      isInitializedRef.current = true;
     } finally {
       setLoading(false);
+      isProcessingRef.current = false;
     }
-  };
+  }, [user]);
+
+  const filterActivities = useCallback(() => {
+    if (allActivities.length === 0) return;
+    
+    console.log('🔍 Filtering activities for:', activeFilter);
+    
+    const filtered = activeFilter === 'all' 
+      ? allActivities 
+      : allActivities.filter(activity => activity.activity_type === activeFilter);
+      
+    setActivities(filtered);
+  }, [activeFilter, allActivities]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);

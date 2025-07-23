@@ -552,12 +552,12 @@ function HomeScreen() {
       </CardRow>
 
       <BottomRow>
-        <HalfCard>
+        <HalfCard onClick={() => navigate('/passport')} aria-label="Go to Passport" style={{ cursor: 'pointer' }}>
           <HalfCardContent>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
               <div style={{ flex: 1 }}>
-                <ProgressText>Stamp Progress</ProgressText>
-                <ProgressSub>{stampData.current}/{stampData.total} Stamps for {stampData.season}</ProgressSub>
+                <ProgressText>Passport</ProgressText>
+                <ProgressSub>{stampData.current}/{stampData.total} stamps this season</ProgressSub>
               </div>
               <div style={{ 
                 display: 'flex',
@@ -577,28 +577,28 @@ function HomeScreen() {
                   borderRadius: '12px',
                   marginBottom: '0.5rem'
                 }}>
-                  🏪
+                  🎫
                 </div>
                 <div style={{ 
                   fontSize: '0.8rem', 
                   color: 'rgba(255, 255, 255, 0.7)',
                   textAlign: 'center'
                 }}>
-                  Recent Stamps
+                  View Passport
                 </div>
               </div>
             </div>
           </HalfCardContent>
         </HalfCard>
-        <HalfCard>
+        <HalfCard onClick={() => navigate('/season-roadmap')} aria-label="View Season Roadmap" style={{ cursor: 'pointer' }}>
           <HalfCardContent>
-            <ProgressText>Season Countdown</ProgressText>
+            <ProgressText>Season Roadmap</ProgressText>
             <ProgressSub>Spring '25 ends in:</ProgressSub>
             <CountdownNumber>
-              <CountdownIcon>🌸</CountdownIcon>
+              <CountdownIcon>🗓️</CountdownIcon>
               {weeklyStats.daysLeftInWeek > 0 ? `${weeklyStats.daysLeftInWeek} Days` : '23 Days'}
             </CountdownNumber>
-            <CardSub>Until Summer '25</CardSub>
+            <CardSub>View Roadmap</CardSub>
           </HalfCardContent>
         </HalfCard>
       </BottomRow>

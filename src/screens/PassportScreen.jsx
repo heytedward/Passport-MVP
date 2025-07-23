@@ -1,22 +1,23 @@
-import React, { useState } from 'react';
-import styled, { css } from 'styled-components';
+import React, { useState, useEffect } from 'react';
+import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { useStamps } from '../hooks/useStamps';
 import FlippableCard from '../components/FlippableCard';
 
 const Container = styled.div`
-  padding: 2rem 1rem 6rem 1rem;
-  max-width: 100vw;
-  overflow-x: hidden;
+  height: 100vh;
+  overflow: hidden;
+  background: #000000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 1rem 100px 1rem;
+  position: relative;
 `;
 
-const ScreenTitle = styled.h1`
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-size: 2rem;
-  margin-bottom: 1.5rem;
-  text-align: center;
-`;
+
 
 const PassportBook = styled.div`
   background: linear-gradient(135deg, rgba(30,30,40,0.85) 0%, rgba(76,28,140,0.13) 100%), rgba(76, 28, 140, 0.15);
@@ -24,477 +25,263 @@ const PassportBook = styled.div`
   -webkit-backdrop-filter: blur(20px);
   border: 3px solid #FFB000;
   border-radius: 20px;
-  padding: 2rem;
-  margin: 2rem auto;
+  padding: 2.5rem;
+  margin: 0 auto;
   max-width: 500px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 
     0 0 20px 0 rgba(255,176,0,0.2),
     0 0 40px 0 rgba(255,176,0,0.1),
     inset 0 1px 0 rgba(255,176,0,0.15);
   position: relative;
   
+  /* Book spine effect */
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    background: linear-gradient(180deg, #FFB000 0%, #FF9F1C 100%);
+    border-radius: 20px 0 0 20px;
+    box-shadow: inset -2px 0 5px rgba(0,0,0,0.3);
+  }
+  
   @media (max-width: 767px) {
     padding: 1.5rem;
-    margin: 1.5rem auto;
-    max-width: 95%;
+    max-height: 90vh;
   }
 `;
 
 const PassportHeader = styled.div`
   text-align: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
+  margin-bottom: 2.5rem;
+  padding-bottom: 2rem;
   border-bottom: 2px dashed rgba(255,176,0,0.3);
+  position: relative;
 `;
 
-const PassportTitle = styled.h2`
+const SeasonTitle = styled.h2`
   font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  font-size: 1.8rem;
+  font-size: 1.2rem;
+  font-weight: 600;
   color: #FFB000;
-  margin-bottom: 0.5rem;
+  margin: 0 0 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+`;
+
+const PassportTitle = styled.h1`
+  font-family: 'Outfit', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 0;
   text-transform: uppercase;
   letter-spacing: 2px;
   text-shadow: 0 0 10px rgba(255,176,0,0.3);
   
   @media (max-width: 767px) {
-    font-size: 1.5rem;
+    font-size: 1.7rem;
     letter-spacing: 1px;
   }
 `;
 
-const PassportSubtitle = styled.div`
+const PassportSubtitle = styled.p`
+  font-size: 1.1rem;
   color: rgba(255,176,0,0.7);
-  font-size: 1rem;
-  margin-bottom: 1rem;
-`;
-
-const StatsContainer = styled.div`
-  background: rgba(255,176,0,0.1);
-  border: 1px solid rgba(255,176,0,0.3);
-  border-radius: 12px;
-  padding: 1rem;
-  margin-bottom: 0.5rem;
-`;
-
-const StatsText = styled.div`
-  color: #FFB000;
-  font-weight: 600;
-  font-size: 1rem;
-  margin-bottom: 8px;
-  text-align: center;
-`;
-
-const ProgressBar = styled.div`
-  width: 100%;
-  height: 6px;
-  background: rgba(255,176,0,0.2);
-  border-radius: 3px;
-  overflow: hidden;
-`;
-
-const ProgressFill = styled.div`
-  height: 100%;
-  background: linear-gradient(90deg, #FFB000 0%, #FFD700 100%);
-  border-radius: 3px;
-  transition: width 0.5s ease;
-  width: ${({ percentage }) => percentage}%;
-  box-shadow: 0 0 8px rgba(255,176,0,0.4);
-`;
-
-const StampsSection = styled.div`
-  margin-top: 2rem;
+  margin: 0.5rem 0 0 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-style: italic;
 `;
 
 const StampsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-  gap: 1.2rem;
-  justify-items: center;
-  align-items: center;
-  padding: 1rem 0;
-  max-width: 320px;
-  margin: 0 auto;
-  
-  @media (max-width: 767px) {
-    gap: 1rem;
-    grid-template-columns: repeat(3, 1fr);
-    max-width: 280px;
-  }
-  
-  @media (max-width: 480px) {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.8rem;
-    max-width: 240px;
-  }
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
 `;
 
 const StampSlot = styled.div`
-  width: 90px;
-  height: 90px;
-  border-radius: 12px;
-  position: relative;
-  cursor: ${({ unlocked }) => unlocked ? 'pointer' : 'default'};
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  /* Base border styling */
-  border: 2px solid ${({ unlocked }) => 
-    unlocked ? '#FFB000' : 'rgba(255,176,0,0.3)'};
-  
-  ${({ unlocked }) => unlocked ? css`
-    /* Unlocked: solid gold border with glow */
-    background: rgba(255,176,0,0.05);
-    box-shadow: 
-      0 0 12px 0 rgba(255,176,0,0.3),
-      0 0 24px 0 rgba(255,176,0,0.15);
-      
-    &:hover {
-      transform: translateY(-3px) scale(1.05);
-      box-shadow: 
-        0 0 16px 0 rgba(255,176,0,0.4),
-        0 0 32px 0 rgba(255,176,0,0.2);
-    }
-  ` : css`
-    /* Locked: dashed border */
-    border-style: dashed;
-    background: rgba(255,255,255,0.02);
-    box-shadow: 
-      0 0 8px 0 rgba(255,176,0,0.1);
-  `}
-  
-  /* Special styling for Master Collector stamp */
-  ${({ isMaster, unlocked }) => isMaster && unlocked && css`
-    border: 2px solid #FFD700;
-    background: linear-gradient(135deg, rgba(255,176,0,0.1) 0%, rgba(255,215,0,0.1) 100%);
-    box-shadow: 
-      0 0 16px 0 rgba(255,215,0,0.4),
-      0 0 32px 0 rgba(255,215,0,0.2);
-      
-    &::before {
-      content: '';
-      position: absolute;
-      inset: -2px;
-      border-radius: 12px;
-      padding: 2px;
-      background: linear-gradient(45deg, #FFD700, #FFB000, #FFD700);
-      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      mask-composite: xor;
-      z-index: -1;
-    }
-  `}
-  
-  @media (max-width: 767px) {
-    width: 75px;
-    height: 75px;
-    border-radius: 10px;
-  }
-  
-  @media (max-width: 480px) {
-    width: 65px;
-    height: 65px;
-  }
-`;
-
-const StampImage = styled.img`
-  width: 70px;
-  height: 70px;
+  aspect-ratio: 1;
+  border: 2px dashed ${props => props.hasStamp ? '#FFB000' : 'rgba(255, 176, 0, 0.3)'};
   border-radius: 8px;
-  transition: all 0.3s ease;
-  
-  ${({ unlocked }) => !unlocked && css`
-    filter: grayscale(100%) brightness(0.4);
-    opacity: 0.6;
-  `}
-  
-  @media (max-width: 767px) {
-    width: 55px;
-    height: 55px;
-  }
-  
-  @media (max-width: 480px) {
-    width: 45px;
-    height: 45px;
-  }
-`;
-
-const StampBadge = styled.div`
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: bold;
-  
-  ${({ unlocked }) => unlocked ? css`
-    background: #10B981;
-    color: white;
-    box-shadow: 0 2px 8px rgba(16,185,129,0.3);
-  ` : css`
-    background: rgba(255,255,255,0.2);
-    color: rgba(255,255,255,0.5);
-    border: 1px solid rgba(255,255,255,0.3);
+  background: ${props => props.hasStamp ? 'linear-gradient(135deg, #FFB000, #FF9F1C)' : 'rgba(255, 255, 255, 0.05)'};
+  color: ${props => props.hasStamp ? '#000000' : 'rgba(255, 255, 255, 0.4)'};
+  font-size: 1.2rem;
+  position: relative;
+  transition: all 0.3s ease;
+  cursor: ${props => props.hasStamp ? 'pointer' : 'default'};
+  backdrop-filter: blur(10px);
+  box-shadow: ${props => props.hasStamp 
+    ? 'inset 0 2px 4px rgba(0,0,0,0.2), 0 1px 2px rgba(255,176,0,0.1)' 
+    : 'inset 0 2px 4px rgba(0,0,0,0.1)'};
+
+  /* Indented effect for earned stamps */
+  ${props => props.hasStamp && `
+    transform: translateY(1px);
+    border-style: solid;
+    border-width: 1px;
   `}
-  
-  @media (max-width: 480px) {
-    width: 16px;
-    height: 16px;
-    font-size: 10px;
-    top: -4px;
-    right: -4px;
+
+  &:hover {
+    transform: ${props => props.hasStamp ? 'translateY(0px) scale(1.02)' : 'none'};
+    box-shadow: ${props => props.hasStamp 
+      ? 'inset 0 1px 2px rgba(0,0,0,0.1), 0 4px 8px rgba(255,176,0,0.2)' 
+      : 'inset 0 2px 4px rgba(0,0,0,0.1)'};
+    border-color: ${props => props.hasStamp ? '#FFB000' : 'rgba(255, 176, 0, 0.5)'};
   }
 `;
 
-const LoadingSkeleton = styled.div`
-  width: 90px;
-  height: 90px;
-  border-radius: 12px;
-  background: linear-gradient(90deg, rgba(255,176,0,0.1) 0%, rgba(255,176,0,0.2) 50%, rgba(255,176,0,0.1) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  
-  @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-  
-  @media (max-width: 767px) {
-    width: 75px;
-    height: 75px;
-  }
-  
-  @media (max-width: 480px) {
-    width: 65px;
-    height: 65px;
-  }
+const StampIcon = styled.div`
+  font-size: 1.4rem;
+  margin-bottom: 0.25rem;
 `;
 
-const ErrorMessage = styled.div`
+const StampName = styled.div`
+  font-size: 0.65rem;
+  font-weight: 600;
   text-align: center;
-  color: #ef4444;
-  padding: 2rem;
-  background: rgba(239,68,68,0.1);
-  border: 1px solid rgba(239,68,68,0.3);
-  border-radius: 12px;
-  margin: 1rem 0;
+  padding: 0 0.2rem;
+  font-family: 'Space Grotesk', sans-serif;
 `;
 
-const EmptyState = styled.div`
+const StampDate = styled.div`
+  font-size: 0.5rem;
+  opacity: 0.8;
+  margin-top: 0.2rem;
+  font-family: 'Space Grotesk', sans-serif;
+`;
+
+const ProgressSection = styled.div`
   text-align: center;
-  padding: 3rem 1rem;
-  color: rgba(255,255,255,0.6);
+  padding: 1rem;
+  background: linear-gradient(135deg, #4C1C8C, #7F3FBF);
+  border-radius: 12px;
+  color: #FFFFFF;
+  border: 1px solid #4C1C8C;
+  box-shadow: 0 4px 12px rgba(76, 28, 140, 0.3);
+`;
+
+const ProgressText = styled.div`
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #FFFFFF;
 `;
 
 const PassportScreen = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { stamps, loading } = useStamps();
   const [selectedStamp, setSelectedStamp] = useState(null);
-  const { stamps, loading, error, unlockedCount, totalCount, completionPercentage, loadUserStamps } = useStamps();
+
+  // Define all possible stamps for the 3x3 grid
+  const allStamps = [
+    { id: 'received_passport', name: 'Welcome', icon: '🎫', description: 'Joined Monarch', rarity: 'Common' },
+    { id: 'morning_gm', name: 'Morning GM', icon: '☀️', description: 'Said GM', rarity: 'Common' },
+    { id: 'first_item', name: 'First Scan', icon: '👕', description: 'First Item', rarity: 'Common' },
+    { id: 'qr_scanner', name: 'Scanner', icon: '📱', description: 'QR Expert', rarity: 'Rare' },
+    { id: 'social_share', name: 'Social', icon: '📣', description: 'Shared Story', rarity: 'Rare' },
+    { id: 'style_icon', name: 'Style Icon', icon: '✨', description: 'Multi-Category', rarity: 'Epic' },
+    { id: 'streak_master', name: 'Streak', icon: '🔥', description: '7-Day Streak', rarity: 'Epic' },
+    { id: 'quest_completed', name: 'Quest', icon: '🎯', description: 'Quest Master', rarity: 'Rare' },
+    { id: 'master_collector', name: 'Master', icon: '👑', description: 'All Stamps', rarity: 'Legendary' }
+  ];
+
+  const earnedStamps = stamps.reduce((acc, stamp) => {
+    acc[stamp.stamp_id] = stamp;
+    return acc;
+  }, {});
+
+  const completedCount = Object.keys(earnedStamps).length;
 
   const handleStampClick = (stamp) => {
-    if (stamp.unlocked) {
-      setSelectedStamp(stamp);
+    const earnedStamp = earnedStamps[stamp.id];
+    if (earnedStamp) {
+      setSelectedStamp({
+        emoji: stamp.icon,
+        date: new Date(earnedStamp.earned_at).toLocaleDateString(),
+        season: 'Fall 2025',
+        rarity: stamp.rarity,
+        name: stamp.name,
+        description: stamp.description
+      });
     }
   };
 
-  const handleCloseModal = () => {
+  const handleCloseCard = () => {
     setSelectedStamp(null);
   };
 
-  const handleRefresh = () => {
-    loadUserStamps();
-  };
-
-  if (loading) {
-    return (
-      <Container>
-        <ScreenTitle>My Monarch Passport</ScreenTitle>
-        <PassportBook>
-          <PassportHeader>
-            <PassportTitle>Spring '25</PassportTitle>
-            <PassportSubtitle>Loading your achievements...</PassportSubtitle>
-            <div style={{ marginTop: '1rem' }}>
-              <button 
-                onClick={handleRefresh}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid #FFB000',
-                  color: '#FFB000',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem'
-                }}
-              >
-                🔄 Refresh
-              </button>
-            </div>
-          </PassportHeader>
-          <StampsGrid>
-            {Array.from({ length: 9 }).map((_, index) => (
-              <LoadingSkeleton key={index} />
-            ))}
-          </StampsGrid>
-        </PassportBook>
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container>
-        <ScreenTitle>My Monarch Passport</ScreenTitle>
-        <PassportBook>
-          <PassportHeader>
-            <PassportTitle>Spring '25</PassportTitle>
-          </PassportHeader>
-          <ErrorMessage>
-            Failed to load stamps: {error}
-            <div style={{ marginTop: '1rem' }}>
-              <button 
-                onClick={handleRefresh}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid #ef4444',
-                  color: '#ef4444',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  marginRight: '0.5rem'
-                }}
-              >
-                🔄 Try Again
-              </button>
-              <button 
-                onClick={() => window.location.reload()}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid #666',
-                  color: '#666',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem'
-                }}
-              >
-                ↻ Reload Page
-              </button>
-            </div>
-          </ErrorMessage>
-        </PassportBook>
-      </Container>
-    );
-  }
-
   return (
-    <>
-      <Container>
-        <ScreenTitle>My Monarch Passport</ScreenTitle>
-        <PassportBook>
-          <PassportHeader>
-            <PassportTitle>Spring '25</PassportTitle>
-            <PassportSubtitle>Monarch Collector Passport</PassportSubtitle>
+    <Container>
+      <PassportBook>
+        <PassportHeader>
+          <SeasonTitle>Fall 2025 - Digital Genesis</SeasonTitle>
+          <PassportTitle>Monarch Passport</PassportTitle>
+          <PassportSubtitle>
+            {user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Collector'}
+          </PassportSubtitle>
+        </PassportHeader>
+
+        <StampsGrid>
+          {allStamps.map((stamp) => {
+            const earnedStamp = earnedStamps[stamp.id];
+            const hasStamp = !!earnedStamp;
             
-            <StatsContainer>
-              <StatsText>
-                {unlockedCount} of {totalCount} stamps collected
-              </StatsText>
-              <ProgressBar>
-                <ProgressFill percentage={completionPercentage} />
-              </ProgressBar>
-              <div style={{ 
-                fontSize: '0.9rem', 
-                color: 'rgba(255,176,0,0.8)', 
-                marginTop: '0.5rem',
-                textAlign: 'center'
-              }}>
-                {completionPercentage}% Complete
-              </div>
-            </StatsContainer>
-          </PassportHeader>
+            return (
+              <StampSlot 
+                key={stamp.id} 
+                hasStamp={hasStamp}
+                onClick={() => handleStampClick(stamp)}
+              >
+                <StampIcon>{stamp.icon}</StampIcon>
+                <StampName>{stamp.name}</StampName>
+                {hasStamp && earnedStamp.earned_at && (
+                  <StampDate>
+                    {new Date(earnedStamp.earned_at).toLocaleDateString()}
+                  </StampDate>
+                )}
+              </StampSlot>
+            );
+          })}
+        </StampsGrid>
 
-          <StampsSection>
-            {stamps.length > 0 ? (
-              <StampsGrid>
-                {stamps.map((stamp) => (
-                  <StampSlot
-                    key={stamp.stamp_id}
-                    unlocked={stamp.unlocked}
-                    isMaster={stamp.stamp_id === 'master_collector'}
-                    onClick={() => handleStampClick(stamp)}
-                    title={stamp.unlocked ? `${stamp.name} - Click to view details` : `${stamp.name} - Not earned yet`}
-                  >
-                    <StampImage
-                      src={stamp.image}
-                      alt={stamp.name}
-                      unlocked={stamp.unlocked}
-                      onError={(e) => {
-                        // Fallback to a default stamp image if the SVG doesn't load
-                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjNEMxQzhDIi8+Cjx0ZXh0IHg9IjUwIiB5PSI2MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI0ZGQjAwMCIgZm9udC1zaXplPSIzMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIj7wn6aLPC90ZXh0Pgo8L3N2Zz4K';
-                      }}
-                    />
-                    <StampBadge unlocked={stamp.unlocked}>
-                      {stamp.unlocked ? '✓' : '🔒'}
-                    </StampBadge>
-                  </StampSlot>
-                ))}
-              </StampsGrid>
-            ) : (
-              <EmptyState>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏅</div>
-                <div>No stamps available</div>
-              </EmptyState>
-            )}
-          </StampsSection>
-        </PassportBook>
-      </Container>
+        <ProgressSection>
+          <ProgressText>
+            {completedCount}/9 Stamps Collected
+          </ProgressText>
+          <ProgressText style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
+            {completedCount === 9 ? '🎉 Master Collector!' : 
+             completedCount >= 6 ? '🔥 Almost there!' :
+             completedCount >= 3 ? '⭐ Great progress!' :
+             '🌱 Just getting started!'}
+          </ProgressText>
+        </ProgressSection>
+      </PassportBook>
 
-      {/* Enhanced Modal using FlippableCard component */}
       {selectedStamp && (
         <FlippableCard
-          isOpen={!!selectedStamp}
-          onClose={handleCloseModal}
-          frontContent={{
-            title: selectedStamp.name,
-            subtitle: selectedStamp.category.charAt(0).toUpperCase() + selectedStamp.category.slice(1),
-            image: selectedStamp.image,
-            imageAlt: selectedStamp.name
-          }}
-          backContent={{
-            title: "Stamp Details",
-            content: (
-              <div style={{ textAlign: 'center', color: '#fff' }}>
-                <div style={{ marginBottom: '1rem' }}>
-                  <strong style={{ color: '#FFB000' }}>Description:</strong>
-                  <div style={{ marginTop: '0.5rem' }}>{selectedStamp.description}</div>
-                </div>
-                <div style={{ marginBottom: '1rem' }}>
-                  <strong style={{ color: '#FFB000' }}>Category:</strong>
-                  <div style={{ marginTop: '0.5rem' }}>
-                    {selectedStamp.category.charAt(0).toUpperCase() + selectedStamp.category.slice(1)}
-                  </div>
-                </div>
-                {selectedStamp.earnedAt && (
-                  <div>
-                    <strong style={{ color: '#FFB000' }}>Earned:</strong>
-                    <div style={{ marginTop: '0.5rem' }}>
-                      {new Date(selectedStamp.earnedAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          }}
+          emoji={selectedStamp.emoji}
+          date={selectedStamp.date}
+          season={selectedStamp.season}
+          rarity={selectedStamp.rarity}
+          onClose={handleCloseCard}
         />
       )}
-    </>
+    </Container>
   );
 };
 

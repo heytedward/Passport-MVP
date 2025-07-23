@@ -4,6 +4,7 @@ import GlassCard from '../components/GlassCard';
 import RecentActivityModal from '../components/RecentActivityModal';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useReferrals } from '../hooks/useReferrals';
 import { createClient } from '@supabase/supabase-js';
 
 const Container = styled.div`
@@ -131,8 +132,12 @@ const SectionTitle = styled.h2`
   color: ${({ theme }) => theme.colors.text.primary};
   font-size: 1.5rem;
   margin-bottom: 24px;
-  text-align: left;
+  text-align: center;
   letter-spacing: 1px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 `;
 
 
@@ -245,6 +250,10 @@ const ModalTitle = styled.h2`
   color: #fff;
   margin-bottom: 0.7rem;
   text-align: center;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 `;
 
 const ModalButton = styled.button`
@@ -519,48 +528,26 @@ const ActionButton = styled.button`
 `;
 
 function ReferralModal({ open, onClose, user }) {
-  const [showQR, setShowQR] = useState(true);
+  const { referralCode, generateReferralLink, shareReferral, isBirthdayLaunch } = useReferrals();
+  const [copied, setCopied] = useState(false);
+  
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) onClose();
   };
   
-  // Get user's profile picture or initial
-  const getUserAvatar = () => {
-    if (user?.user_metadata?.avatar_url) {
-      return (
-        <img 
-          src={user.user_metadata.avatar_url} 
-          alt="Profile" 
-          style={{ 
-            width: '100%', 
-            height: '100%', 
-            objectFit: 'cover', 
-            borderRadius: '16px' 
-          }} 
-        />
-      );
-    } else {
-      // Show user's initial in a styled avatar
-      const initial = user?.user_metadata?.username ? 
-        user.user_metadata.username.charAt(0).toUpperCase() : 
-        user?.email ? user.email.charAt(0).toUpperCase() : 'U';
-      
-      return (
-        <div style={{
-          width: '100%',
-          height: '100%',
-          borderRadius: '16px',
-          background: 'linear-gradient(135deg, #4C1C8C 0%, #7F3FBF 50%, #9D4EDD 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '2.5rem',
-          color: '#fff',
-          fontWeight: 'bold'
-        }}>
-          {initial}
-        </div>
-      );
+  const handleCopyLink = async () => {
+    if (!referralCode) return;
+    
+    const result = await shareReferral(referralCode);
+    if (result.success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleNativeShare = async () => {
+    if (referralCode) {
+      await shareReferral(referralCode);
     }
   };
   
@@ -568,21 +555,81 @@ function ReferralModal({ open, onClose, user }) {
     <ModalOverlay onClick={handleOverlayClick}>
       <ModalCard>
         <ModalClose aria-label="Close" onClick={onClose}>×</ModalClose>
-        <ModalTitle>Share Referral</ModalTitle>
-        {showQR && (
-          <div style={{ width: '100%', textAlign: 'center', marginTop: '0.2rem' }}>
-            <QRContainer>
-              {getUserAvatar()}
-            </QRContainer>
-            <div style={{ color: '#FFD700', fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: '1.05rem', marginBottom: 8 }}>
-              Join me on Monarch Passport!
+        <ModalTitle>Share Your Referral</ModalTitle>
+        
+        {referralCode ? (
+          <div style={{ width: '100%', textAlign: 'center', marginTop: '0.5rem' }}>
+            <div style={{
+              background: 'rgba(255, 176, 0, 0.1)',
+              border: '1px solid rgba(255, 176, 0, 0.3)',
+              borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '1rem'
+            }}>
+              <div style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                Your Referral Code
+              </div>
+              <div style={{ 
+                fontSize: '1.8rem', 
+                fontWeight: 'bold', 
+                color: '#FFD700',
+                fontFamily: 'monospace',
+                letterSpacing: '3px',
+                marginBottom: '0.5rem'
+              }}>
+                {referralCode}
+              </div>
+              <div style={{ color: '#aaa', fontSize: '0.8rem' }}>
+                Each friend earns you {isBirthdayLaunch ? '100' : '50'} WINGS
+              </div>
             </div>
-            <ModalButton
-              style={{ marginBottom: 0 }}
-              onClick={() => window.open('https://www.instagram.com/', '_blank')}
-            >
-              Share to Instagram Story
-            </ModalButton>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <ModalButton onClick={handleNativeShare}>
+                📱 Share with Friends
+              </ModalButton>
+              
+              <ModalButton onClick={handleCopyLink}>
+                {copied ? '✅ Copied!' : '📋 Copy Referral Link'}
+              </ModalButton>
+              
+              <ModalButton 
+                onClick={() => window.open(`https://www.instagram.com/`, '_blank')}
+                style={{ background: 'linear-gradient(45deg, #405DE6, #5851DB, #833AB4, #C13584, #E1306C, #FD1D1D)' }}
+              >
+                📸 Share to Instagram Story
+              </ModalButton>
+            </div>
+
+            {isBirthdayLaunch && (
+              <div style={{ 
+                marginTop: '1rem', 
+                padding: '0.75rem',
+                background: 'rgba(255, 215, 0, 0.1)',
+                border: '1px solid rgba(255, 215, 0, 0.3)',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                color: '#FFD700'
+              }}>
+                🎂 Birthday Launch Special: DOUBLE REWARDS until Sept 14th!
+              </div>
+            )}
+
+            <div style={{ 
+              marginTop: '1rem', 
+              padding: '0.75rem',
+              background: 'rgba(16, 185, 129, 0.1)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: '8px',
+              fontSize: '0.85rem',
+              color: '#10B981'
+            }}>
+              💡 Friends get {isBirthdayLaunch ? '50' : '25'} WINGS for joining + {isBirthdayLaunch ? '50' : '25'} more for their first scan!
+            </div>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', color: '#aaa' }}>
+            Loading your referral code...
           </div>
         )}
       </ModalCard>
@@ -597,6 +644,21 @@ function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
+  const { 
+    referralCode, 
+    referralStats, 
+    referralHistory, 
+    loading: referralLoading, 
+    shareReferral,
+    generateReferralLink 
+  } = useReferrals();
+
+  // Debug referral code
+  useEffect(() => {
+    console.log('🎯 ProfileScreen: referralCode updated:', referralCode);
+    console.log('🎯 ProfileScreen: referralLoading:', referralLoading);
+    console.log('🎯 ProfileScreen: user:', user?.id);
+  }, [referralCode, referralLoading, user]);
   const theme = useTheme();
 
   useEffect(() => {
@@ -729,33 +791,136 @@ function ProfileScreen() {
       </TopRow>
 
       <SectionCard style={{ display: 'flex', flexDirection: 'column' }}>
-        <SectionTitle>Referral Tracker</SectionTitle>
-        <ReferralList>
-          <ReferralItem>
-            <ReferralIcon>👥</ReferralIcon>
-            <ReferralContent>
-              <ReferralTitle>Friends Invited</ReferralTitle>
-              <ReferralDescription>Shared referral code with friends</ReferralDescription>
-            </ReferralContent>
-            <ReferralMeta>
-              <ReferralStatus>Completed</ReferralStatus>
-                              <ReferralReward>+50 WNGS</ReferralReward>
-            </ReferralMeta>
-          </ReferralItem>
-          <ReferralItem>
-            <ReferralIcon>✅</ReferralIcon>
-            <ReferralContent>
-              <ReferralTitle>Friend Joined</ReferralTitle>
-              <ReferralDescription>New user joined via your referral</ReferralDescription>
-            </ReferralContent>
-            <ReferralMeta>
-              <ReferralStatus>Completed</ReferralStatus>
-                              <ReferralReward>+25 WNGS</ReferralReward>
-            </ReferralMeta>
-          </ReferralItem>
-        </ReferralList>
-        <ShareReferralButton onClick={() => setShowReferralModal(true)}>
-          Share Referral
+        <SectionTitle>Referral Program</SectionTitle>
+        
+        {/* Referral Stats */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+          gap: '1rem', 
+          marginBottom: '1.5rem' 
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFD700' }}>
+              {referralStats.totalReferrals}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: '#aaa' }}>Total Referrals</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#10B981' }}>
+              {referralStats.completedReferrals}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: '#aaa' }}>Completed</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFB000' }}>
+              {referralStats.totalWingsEarned}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: '#aaa' }}>WINGS Earned</div>
+          </div>
+        </div>
+
+        {/* Referral Code Display */}
+        <div style={{
+          background: 'rgba(255, 176, 0, 0.1)',
+          border: '1px solid rgba(255, 176, 0, 0.3)',
+          borderRadius: '12px',
+          padding: '1rem',
+          marginBottom: '1rem',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '0.9rem', color: '#aaa', marginBottom: '0.5rem' }}>
+            Your Referral Code
+          </div>
+          {referralLoading ? (
+            <div style={{ 
+              fontSize: '1.2rem', 
+              color: '#aaa',
+              padding: '1rem'
+            }}>
+              Generating your code...
+            </div>
+          ) : referralCode ? (
+            <>
+              <div style={{ 
+                fontSize: '1.5rem', 
+                fontWeight: 'bold', 
+                color: '#FFD700',
+                fontFamily: 'monospace',
+                letterSpacing: '2px'
+              }}>
+                {referralCode}
+              </div>
+              <div style={{ fontSize: '0.8rem', color: '#aaa', marginTop: '0.5rem' }}>
+                Share this code to earn 50 WINGS per completed referral
+              </div>
+            </>
+          ) : (
+            <div style={{ 
+              fontSize: '1rem', 
+              color: '#e74c3c',
+              padding: '1rem'
+            }}>
+              Failed to generate referral code. Please refresh the page.
+            </div>
+          )}
+        </div>
+
+        {/* Recent Referrals */}
+        {referralHistory.length > 0 ? (
+          <ReferralList>
+            <div style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '1rem', color: '#fff' }}>
+              Recent Referrals
+            </div>
+            {referralHistory.slice(0, 3).map((referral) => (
+              <ReferralItem key={referral.id}>
+                <ReferralIcon>👥</ReferralIcon>
+                <ReferralContent>
+                  <ReferralTitle>{referral.refereeName}</ReferralTitle>
+                  <ReferralDescription>
+                    Joined {new Date(referral.createdAt).toLocaleDateString()}
+                  </ReferralDescription>
+                </ReferralContent>
+                <ReferralMeta>
+                  <ReferralStatus style={{
+                    color: referral.status === 'completed' ? '#10B981' : '#FFB000'
+                  }}>
+                    {referral.status === 'completed' ? 'Completed' : 'Pending'}
+                  </ReferralStatus>
+                  {referral.rewardGiven && referral.wingsEarned > 0 && (
+                    <ReferralReward>+{referral.wingsEarned} WINGS</ReferralReward>
+                  )}
+                </ReferralMeta>
+              </ReferralItem>
+            ))}
+            {referralHistory.length > 3 && (
+              <div style={{ textAlign: 'center', marginTop: '1rem', color: '#aaa', fontSize: '0.9rem' }}>
+                +{referralHistory.length - 3} more referrals
+              </div>
+            )}
+          </ReferralList>
+        ) : (
+          <div style={{ textAlign: 'center', color: '#aaa', marginBottom: '1rem' }}>
+            No referrals yet. Share your code to start earning!
+          </div>
+        )}
+
+        <ShareReferralButton 
+          onClick={() => {
+            if (referralCode) {
+              shareReferral(referralCode);
+            } else {
+              console.log('❌ No referral code available to share');
+              alert('Referral code not ready yet. Please wait a moment and try again.');
+            }
+          }}
+          disabled={!referralCode}
+          style={{ 
+            opacity: referralCode ? 1 : 0.6,
+            cursor: referralCode ? 'pointer' : 'not-allowed'
+          }}
+        >
+          {referralLoading ? 'Loading...' : 'Share Referral Code'}
         </ShareReferralButton>
       </SectionCard>
 
