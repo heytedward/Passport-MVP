@@ -236,27 +236,9 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
       isInitializedRef.current = false;
       fetchAllActivities();
     } else if (isOpen && !user) {
-      // If no user, show mock data immediately
-      console.log('👤 No user, showing mock data immediately');
-      const mockActivities = [
-        {
-          id: 1,
-          activity_type: 'scan',
-          activity_title: 'QR Code Scanned',
-          activity_description: 'Scanned QR code at Coffee Shop Downtown',
-          wings_earned: 35,
-          activity_date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: 2,
-          activity_type: 'quest',
-          activity_title: 'Daily Quest Completed',
-          activity_description: 'Completed "Morning Scan Challenge"',
-          wings_earned: 75,
-          activity_date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-        }
-      ];
-      setAllActivities(mockActivities);
+      // If no user, show empty state
+      console.log('👤 No user, showing empty state');
+      setAllActivities([]);
       setLoading(false);
     }
   }, [isOpen, user]);
@@ -309,141 +291,16 @@ const RecentActivityModal = ({ isOpen, onClose }) => {
       
       if (error) throw error;
       
-              // If no data from database, use mock data for demonstration
-        if (!data || data.length === 0) {
-          console.log('📊 No database data, using mock activities');
-          const mockActivities = [
-          {
-            id: 1,
-            activity_type: 'scan',
-            activity_title: 'QR Code Scanned',
-            activity_description: 'Scanned QR code at Coffee Shop Downtown',
-            wings_earned: 35,
-            activity_date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-          },
-          {
-            id: 2,
-            activity_type: 'quest',
-            activity_title: 'Daily Quest Completed',
-            activity_description: 'Completed "Morning Scan Challenge"',
-            wings_earned: 75,
-            activity_date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
-          },
-          {
-            id: 3,
-            activity_type: 'daily',
-            activity_title: 'Daily Login Bonus',
-            activity_description: 'Claimed daily login reward',
-            wings_earned: 35,
-            activity_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-          },
-          {
-            id: 4,
-            activity_type: 'referral',
-            activity_title: 'Friend Joined',
-            activity_description: 'Your friend Alex joined using your referral code',
-            wings_earned: 150,
-            activity_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-          },
-          {
-            id: 5,
-            activity_type: 'event',
-            activity_title: 'Special Event Participation',
-            activity_description: 'Participated in "Weekend Warrior" event',
-            wings_earned: 150,
-            activity_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-          },
-          {
-            id: 6,
-            activity_type: 'scan',
-            activity_title: 'QR Code Scanned',
-            activity_description: 'Scanned QR code at Retail Store Plaza',
-            wings_earned: 35,
-            activity_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
-          },
-          {
-            id: 7,
-            activity_type: 'quest',
-            activity_title: 'Weekly Quest Completed',
-            activity_description: 'Completed "Explorer Challenge" - visited 5 locations',
-            wings_earned: 150,
-            activity_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
-          },
-          {
-            id: 8,
-            activity_type: 'daily',
-            activity_title: 'Streak Bonus',
-            activity_description: '7-day login streak achieved!',
-            wings_earned: 75,
-            activity_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
-          }
-        ];
-        
-        setAllActivities(mockActivities);
-        isInitializedRef.current = true;
-      } else {
-        console.log('✅ Database activities loaded:', data.length);
-        setAllActivities(data);
-        isInitializedRef.current = true;
-      }
+      // Set activities from database (empty array if no activities)
+      console.log('✅ Database activities loaded:', data?.length || 0);
+      setAllActivities(data || []);
+      isInitializedRef.current = true;
     } catch (error) {
       console.error('❌ Error fetching activities:', error);
-      console.log('🔄 Falling back to mock data due to error');
+      console.log('🔄 Error loading activities, showing empty state');
       
-      // Enhanced mock data with more variety
-      const mockActivities = [
-        {
-          id: 1,
-          activity_type: 'scan',
-          activity_title: 'QR Code Scanned',
-          activity_description: 'Scanned QR code at Coffee Shop Downtown',
-          wings_earned: 35,
-          activity_date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: 2,
-          activity_type: 'quest',
-          activity_title: 'Daily Quest Completed',
-          activity_description: 'Completed "Morning Scan Challenge"',
-          wings_earned: 75,
-          activity_date: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: 3,
-          activity_type: 'daily',
-          activity_title: 'Daily Login Bonus',
-          activity_description: 'Claimed daily login reward',
-          wings_earned: 35,
-          activity_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: 4,
-          activity_type: 'referral',
-          activity_title: 'Friend Joined',
-          activity_description: 'Your friend Alex joined using your referral code',
-          wings_earned: 150,
-          activity_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: 5,
-          activity_type: 'event',
-          activity_title: 'Special Event Participation',
-          activity_description: 'Participated in "Weekend Warrior" event',
-          wings_earned: 150,
-          activity_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: 6,
-          activity_type: 'scan',
-          activity_title: 'QR Code Scanned',
-          activity_description: 'Scanned QR code at Retail Store Plaza',
-          wings_earned: 35,
-          activity_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-        }
-      ];
-      
-      console.log('📊 Setting mock activities:', mockActivities.length);
-      setAllActivities(mockActivities);
+      // On error, show empty state instead of mock data
+      setAllActivities([]);
       isInitializedRef.current = true;
     } finally {
       console.log('✅ fetchAllActivities completed, setting loading to false');

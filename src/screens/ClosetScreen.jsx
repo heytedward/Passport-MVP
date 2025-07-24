@@ -824,19 +824,19 @@ const ClosetScreen = () => {
         console.log('User auth result:', user ? 'Authenticated' : 'Not authenticated');
         setUser(user);
         
-        if (user) {
-          await loadUserItems(user.id);
-        } else {
-          // If no user, show mock data for demo
-          console.log('No authenticated user, using mock data');
-          setItems(mockClosetItems);
-          setLoading(false);
-        }
+              if (user) {
+        await loadUserItems(user.id);
+      } else {
+        // If no user, show empty state
+        console.log('No authenticated user, showing empty state');
+        setItems([]);
+        setLoading(false);
+      }
       } catch (error) {
         console.error('Error getting user:', error);
-        console.log('Auth error, falling back to mock data');
-        // On any error, fall back to mock data immediately
-        setItems(mockClosetItems);
+        console.log('Auth error, showing empty state');
+        // On any error, show empty state
+        setItems([]);
         setLoading(false);
       }
     };
@@ -876,19 +876,14 @@ const ClosetScreen = () => {
 
       console.log('Database query successful, items found:', closetItems?.length || 0);
 
-      // If no items from database, use mock data for demo
-      if (!closetItems || closetItems.length === 0) {
-        console.log('No items in database, using mock data');
-        setItems(mockClosetItems);
-      } else {
-        console.log('Using database items');
-        setItems(closetItems);
-      }
+      // Set items from database (empty array if no items)
+      console.log('Setting items from database:', closetItems?.length || 0);
+      setItems(closetItems || []);
     } catch (error) {
       console.error('Error loading closet items:', error);
-      console.log('Falling back to mock data');
-      // On error, fall back to mock data
-      setItems(mockClosetItems);
+      console.log('Error loading items, showing empty state');
+      // On error, show empty state
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -1026,7 +1021,9 @@ const ClosetScreen = () => {
         ))}
       </SubFilterTabs>
 
-      {filteredItems.length > 0 ? (
+      {loading ? (
+        <EmptyState>Loading your collection...</EmptyState>
+      ) : filteredItems.length > 0 ? (
         <ItemsGrid>
           {filteredItems.map(item => (
             <ItemCard 
@@ -1097,8 +1094,8 @@ const ClosetScreen = () => {
       ) : (
         <EmptyState>
           {mainFilter === 'all' 
-            ? 'Your closet is empty. Start scanning QR codes to collect items!'
-            : `No ${mainFilter} items found. Try scanning more QR codes or check other categories.`
+            ? '🎯 Your closet is waiting! Scan QR codes at Papillon stores to start your collection.'
+            : `No ${mainFilter} items found. Try scanning QR codes to collect more items!`
           }
         </EmptyState>
       )}

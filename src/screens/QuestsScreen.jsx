@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled, { css } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import { useQuests } from '../hooks/useQuests';
 
 const Container = styled.div`
   height: 100vh;
@@ -372,63 +373,9 @@ const EmptyState = styled.div`
 const QuestsScreen = () => {
   const navigate = useNavigate();
   const [selectedQuest, setSelectedQuest] = useState(null);
-  
-  // Enhanced quest data with descriptions and rewards
-  const questProgress = [
-    {
-      id: 1,
-      icon: '📱',
-      title: 'Digital Collector',
-      description: 'Scan QR codes on Papillon items to build your digital collection and unlock exclusive rewards.',
-      progress: 7,
-      total: 10,
-      reward: 100,
-      percent: 70,
-      category: 'Collection',
-      completed: false
-    },
-    {
-      id: 2,
-      icon: '🏪',
-      title: 'Store Explorer',
-      description: 'Visit different Papillon store locations and experience the brand in person across multiple cities.',
-      progress: 1,
-      total: 3,
-      reward: 75,
-      percent: 33,
-      category: 'Exploration',
-      completed: false
-    },
-    {
-      id: 3,
-      icon: '👥',
-      title: 'Social Butterfly',
-      description: 'Share your Monarch Passport journey on social media to inspire others and grow the community.',
-      progress: 5,
-      total: 5,
-      reward: 50,
-      percent: 100,
-      category: 'Social',
-      completed: true
-    },
-    {
-      id: 4,
-      icon: '🎯',
-      title: 'Daily Dedication',
-      description: 'Complete daily challenges consistently to prove your dedication to the Monarch lifestyle.',
-      progress: 12,
-      total: 15,
-      reward: 125,
-      percent: 80,
-      category: 'Daily',
-      completed: false
-    }
-  ];
+  const { questProgress, questStats, loading, error } = useQuests();
 
-  const totalQuests = questProgress.length;
-  const completedQuests = questProgress.filter(q => q.completed).length;
-  const activeQuests = totalQuests - completedQuests;
-  const totalRewards = questProgress.filter(q => q.completed).reduce((sum, q) => sum + q.reward, 0);
+  const { totalQuests, completedQuests, activeQuests, totalRewards } = questStats;
 
   return (
     <Container>
@@ -458,7 +405,19 @@ const QuestsScreen = () => {
         </JournalHeader>
 
         <QuestPages>
-          {questProgress.length > 0 ? (
+          {loading ? (
+            <EmptyState>
+              <div className="icon">⏳</div>
+              <div className="message">Loading your quests...</div>
+              <div className="submessage">Please wait while we fetch your progress</div>
+            </EmptyState>
+          ) : error ? (
+            <EmptyState>
+              <div className="icon">⚠️</div>
+              <div className="message">Error loading quests</div>
+              <div className="submessage">{error}</div>
+            </EmptyState>
+          ) : questProgress.length > 0 ? (
             questProgress.map((quest) => (
               <QuestPage 
                 key={quest.id} 
@@ -493,9 +452,9 @@ const QuestsScreen = () => {
             ))
           ) : (
             <EmptyState>
-              <div className="icon">📖</div>
-              <div className="message">No quests available</div>
-              <div className="submessage">Check back later for new adventures</div>
+              <div className="icon">🎯</div>
+              <div className="message">Ready to start your journey?</div>
+              <div className="submessage">Scan your first QR code to begin earning rewards!</div>
             </EmptyState>
           )}
         </QuestPages>

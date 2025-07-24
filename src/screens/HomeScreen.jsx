@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../hooks/useAuth';
 import { useStamps } from '../hooks/useStamps';
+import { useQuests } from '../hooks/useQuests';
 import DailiesModal from '../components/DailiesModal';
 import LiveCountdown from '../components/LiveCountdown';
 
@@ -441,6 +442,7 @@ function HomeScreen() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { awardPassportStamp, hasStamp } = useStamps();
+  const { questProgress, questStats, loading: questsLoading } = useQuests();
 
   // Use the weekly wings hook
   const { weeklyStats, loading, error, getWeeklyProgressText, refreshStats } = useWeeklyWings(user?.id);
@@ -461,34 +463,10 @@ function HomeScreen() {
     awardWelcomeStamp();
   }, [user, hasStamp, awardPassportStamp]);
 
-  // Example quest progress data
-  const questProgress = [
-    {
-      id: 1,
-      title: 'Scan 10 Papillon Items',
-      description: 'Scan 10 different Papillon items to unlock exclusive rewards',
-      progress: 7,
-      total: 10,
-      reward: 50,
-      icon: '📱',
-      category: 'Collection',
-      percent: 70
-    },
-    {
-      icon: '🏪',
-      title: 'Visit 3 Store Locations',
-      progress: 1,
-      total: 3,
-      percent: 33,
-    },
-    {
-      icon: '👥',
-      title: 'Share on Social Media',
-      progress: 2,
-      total: 5,
-      percent: 40,
-    },
-  ];
+  // Get active quests (limit to 3 for home screen display)
+  const activeQuests = questProgress
+    .filter(quest => !quest.completed)
+    .slice(0, 3);
 
   // Mock stamp data for demonstration
   const stampData = {
@@ -531,22 +509,42 @@ function HomeScreen() {
         <FullCard onClick={() => navigate('/quests')} aria-label="Go to Active Quests">
           <HalfCardContent style={{ flex: 1, width: '100%' }}>
             <ProgressText>Active Quests</ProgressText>
-            <ProgressSub>2 Active • Complete to earn rewards</ProgressSub>
+            <ProgressSub>
+              {questsLoading ? 'Loading...' : 
+               activeQuests.length > 0 ? `${activeQuests.length} Active • Complete to earn rewards` :
+               'No active quests • Tap to view all quests'}
+            </ProgressSub>
             <QuestsSection>
-              {questProgress.map((q, i) => (
-                <QuestItem key={i}>
+              {questsLoading ? (
+                <QuestItem>
                   <QuestItemInfo>
-                    <QuestItemIcon>{q.icon}</QuestItemIcon>
-                    <QuestItemTitle>{q.title}</QuestItemTitle>
-                    <ProgressTextRight>
-                      {q.progress}/{q.total}
-                    </ProgressTextRight>
+                    <QuestItemIcon>⏳</QuestItemIcon>
+                    <QuestItemTitle>Loading your quests...</QuestItemTitle>
                   </QuestItemInfo>
-                  <ProgressBar>
-                    <ProgressFill value={q.percent} />
-                  </ProgressBar>
                 </QuestItem>
-              ))}
+              ) : activeQuests.length > 0 ? (
+                activeQuests.map((quest, i) => (
+                  <QuestItem key={quest.id || i}>
+                    <QuestItemInfo>
+                      <QuestItemIcon>{quest.icon}</QuestItemIcon>
+                      <QuestItemTitle>{quest.title}</QuestItemTitle>
+                      <ProgressTextRight>
+                        {quest.progress}/{quest.total}
+                      </ProgressTextRight>
+                    </QuestItemInfo>
+                    <ProgressBar>
+                      <ProgressFill value={quest.percent} />
+                    </ProgressBar>
+                  </QuestItem>
+                ))
+              ) : (
+                <QuestItem>
+                  <QuestItemInfo>
+                    <QuestItemIcon>🎯</QuestItemIcon>
+                    <QuestItemTitle>Ready to start? Scan your first QR code!</QuestItemTitle>
+                  </QuestItemInfo>
+                </QuestItem>
+              )}
             </QuestsSection>
           </HalfCardContent>
         </FullCard>
