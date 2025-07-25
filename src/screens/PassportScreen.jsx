@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useStamps } from '../hooks/useStamps';
+import { useThemes } from '../hooks/useThemes';
+import { gradientThemes } from '../styles/theme';
 import FlippableCard from '../components/FlippableCard';
 
 const Container = styled.div`
@@ -17,13 +19,42 @@ const Container = styled.div`
   position: relative;
 `;
 
-
-
+// Dynamic PassportBook that changes based on equipped theme
 const PassportBook = styled.div`
-  background: linear-gradient(135deg, rgba(30,30,40,0.85) 0%, rgba(76,28,140,0.13) 100%), rgba(76, 28, 140, 0.15);
+  background: ${({ themeGradient, themeKey }) => {
+    // Base glass effect
+    const baseGlass = 'rgba(30,30,40,0.85)';
+    
+    // Theme-specific backgrounds
+    switch (themeKey) {
+      case 'solarShine':
+        return `linear-gradient(135deg, ${baseGlass} 0%, rgba(255,176,0,0.15) 100%), rgba(255, 176, 0, 0.1)`;
+      case 'echoGlass':
+        return `linear-gradient(135deg, ${baseGlass} 0%, rgba(108,108,108,0.2) 100%), rgba(0, 0, 0, 0.3)`;
+      case 'retroFrame':
+        return `linear-gradient(135deg, ${baseGlass} 0%, rgba(108,108,108,0.15) 100%), rgba(250, 250, 250, 0.05)`;
+      case 'nightScan':
+        return `linear-gradient(135deg, ${baseGlass} 0%, rgba(76,28,140,0.2) 100%), rgba(0, 0, 0, 0.4)`;
+      default: // frequencyPulse
+        return `linear-gradient(135deg, ${baseGlass} 0%, rgba(76,28,140,0.13) 100%), rgba(76, 28, 140, 0.15)`;
+    }
+  }};
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 3px solid #FFB000;
+  border: 3px solid ${({ themeKey }) => {
+    switch (themeKey) {
+      case 'solarShine':
+        return '#FFB000';
+      case 'echoGlass':
+        return '#6C6C6C';
+      case 'retroFrame':
+        return '#FAFAFA';
+      case 'nightScan':
+        return '#4C1C8C';
+      default: // frequencyPulse
+        return '#FFB000';
+    }
+  }};
   border-radius: 20px;
   padding: 2.5rem;
   margin: 0 auto;
@@ -32,11 +63,45 @@ const PassportBook = styled.div`
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 
-    0 0 20px 0 rgba(255,176,0,0.2),
-    0 0 40px 0 rgba(255,176,0,0.1),
-    inset 0 1px 0 rgba(255,176,0,0.15);
+  box-shadow: ${({ themeKey }) => {
+    const baseShadow = '0 0 20px 0';
+    const insetShadow = 'inset 0 1px 0';
+    
+    switch (themeKey) {
+      case 'solarShine':
+        return `
+          ${baseShadow} rgba(255,176,0,0.3),
+          0 0 40px 0 rgba(255,176,0,0.15),
+          ${insetShadow} rgba(255,176,0,0.2)
+        `;
+      case 'echoGlass':
+        return `
+          ${baseShadow} rgba(108,108,108,0.3),
+          0 0 40px 0 rgba(108,108,108,0.15),
+          ${insetShadow} rgba(108,108,108,0.2)
+        `;
+      case 'retroFrame':
+        return `
+          ${baseShadow} rgba(250,250,250,0.2),
+          0 0 40px 0 rgba(250,250,250,0.1),
+          ${insetShadow} rgba(250,250,250,0.15)
+        `;
+      case 'nightScan':
+        return `
+          ${baseShadow} rgba(76,28,140,0.4),
+          0 0 40px 0 rgba(76,28,140,0.2),
+          ${insetShadow} rgba(76,28,140,0.25)
+        `;
+      default: // frequencyPulse
+        return `
+          ${baseShadow} rgba(255,176,0,0.2),
+          0 0 40px 0 rgba(255,176,0,0.1),
+          ${insetShadow} rgba(255,176,0,0.15)
+        `;
+    }
+  }};
   position: relative;
+  transition: all 0.3s ease;
   
   /* Book spine effect */
   &::before {
@@ -46,7 +111,20 @@ const PassportBook = styled.div`
     top: 0;
     bottom: 0;
     width: 8px;
-    background: linear-gradient(180deg, #FFB000 0%, #FF9F1C 100%);
+    background: ${({ themeKey }) => {
+      switch (themeKey) {
+        case 'solarShine':
+          return 'linear-gradient(180deg, #FFB000 0%, #FF9F1C 100%)';
+        case 'echoGlass':
+          return 'linear-gradient(180deg, #6C6C6C 0%, #4A4A4A 100%)';
+        case 'retroFrame':
+          return 'linear-gradient(180deg, #FAFAFA 0%, #E0E0E0 100%)';
+        case 'nightScan':
+          return 'linear-gradient(180deg, #4C1C8C 0%, #2D1B69 100%)';
+        default: // frequencyPulse
+          return 'linear-gradient(180deg, #FFB000 0%, #FF9F1C 100%)';
+      }
+    }};
     border-radius: 20px 0 0 20px;
     box-shadow: inset -2px 0 5px rgba(0,0,0,0.3);
   }
@@ -61,7 +139,20 @@ const PassportHeader = styled.div`
   text-align: center;
   margin-bottom: 2.5rem;
   padding-bottom: 2rem;
-  border-bottom: 2px dashed rgba(255,176,0,0.3);
+  border-bottom: 2px dashed ${({ themeKey }) => {
+    switch (themeKey) {
+      case 'solarShine':
+        return 'rgba(255,176,0,0.4)';
+      case 'echoGlass':
+        return 'rgba(108,108,108,0.4)';
+      case 'retroFrame':
+        return 'rgba(250,250,250,0.4)';
+      case 'nightScan':
+        return 'rgba(76,28,140,0.4)';
+      default: // frequencyPulse
+        return 'rgba(255,176,0,0.3)';
+    }
+  }};
   position: relative;
 `;
 
@@ -69,7 +160,20 @@ const SeasonTitle = styled.h2`
   font-family: 'Outfit', sans-serif;
   font-size: 1.2rem;
   font-weight: 600;
-  color: #FFB000;
+  color: ${({ themeKey }) => {
+    switch (themeKey) {
+      case 'solarShine':
+        return '#FFB000';
+      case 'echoGlass':
+        return '#6C6C6C';
+      case 'retroFrame':
+        return '#FAFAFA';
+      case 'nightScan':
+        return '#4C1C8C';
+      default: // frequencyPulse
+        return '#FFB000';
+    }
+  }};
   margin: 0 0 0.5rem 0;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -83,7 +187,20 @@ const PassportTitle = styled.h1`
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 2px;
-  text-shadow: 0 0 10px rgba(255,176,0,0.3);
+  text-shadow: ${({ themeKey }) => {
+    switch (themeKey) {
+      case 'solarShine':
+        return '0 0 10px rgba(255,176,0,0.4)';
+      case 'echoGlass':
+        return '0 0 10px rgba(108,108,108,0.4)';
+      case 'retroFrame':
+        return '0 0 10px rgba(250,250,250,0.4)';
+      case 'nightScan':
+        return '0 0 10px rgba(76,28,140,0.4)';
+      default: // frequencyPulse
+        return '0 0 10px rgba(255,176,0,0.3)';
+    }
+  }};
   
   @media (max-width: 767px) {
     font-size: 1.7rem;
@@ -93,7 +210,20 @@ const PassportTitle = styled.h1`
 
 const PassportSubtitle = styled.p`
   font-size: 1.1rem;
-  color: rgba(255,176,0,0.7);
+  color: ${({ themeKey }) => {
+    switch (themeKey) {
+      case 'solarShine':
+        return 'rgba(255,176,0,0.8)';
+      case 'echoGlass':
+        return 'rgba(108,108,108,0.8)';
+      case 'retroFrame':
+        return 'rgba(250,250,250,0.8)';
+      case 'nightScan':
+        return 'rgba(76,28,140,0.8)';
+      default: // frequencyPulse
+        return 'rgba(255,176,0,0.7)';
+    }
+  }};
   margin: 0.5rem 0 0 0;
   font-family: 'Space Grotesk', sans-serif;
   font-style: italic;
@@ -111,22 +241,66 @@ const StampsGrid = styled.div`
 
 const StampSlot = styled.div`
   aspect-ratio: 1;
-  border: 2px dashed ${props => props.hasStamp ? '#FFB000' : 'rgba(255, 176, 0, 0.3)'};
+  border: 2px dashed ${props => {
+    const { hasStamp, themeKey } = props;
+    const borderColor = hasStamp ? {
+      solarShine: '#FFB000',
+      echoGlass: '#6C6C6C',
+      retroFrame: '#FAFAFA',
+      nightScan: '#4C1C8C',
+      frequencyPulse: '#FFB000'
+    }[themeKey] || '#FFB000' : {
+      solarShine: 'rgba(255, 176, 0, 0.4)',
+      echoGlass: 'rgba(108, 108, 108, 0.4)',
+      retroFrame: 'rgba(250, 250, 250, 0.4)',
+      nightScan: 'rgba(76, 28, 140, 0.4)',
+      frequencyPulse: 'rgba(255, 176, 0, 0.3)'
+    }[themeKey] || 'rgba(255, 176, 0, 0.3)';
+    
+    return borderColor;
+  }};
   border-radius: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: ${props => props.hasStamp ? 'linear-gradient(135deg, #FFB000, #FF9F1C)' : 'rgba(255, 255, 255, 0.05)'};
+  background: ${props => {
+    const { hasStamp, themeKey } = props;
+    if (!hasStamp) return 'rgba(255, 255, 255, 0.05)';
+    
+    switch (themeKey) {
+      case 'solarShine':
+        return 'linear-gradient(135deg, #FFB000, #FF9F1C)';
+      case 'echoGlass':
+        return 'linear-gradient(135deg, #6C6C6C, #4A4A4A)';
+      case 'retroFrame':
+        return 'linear-gradient(135deg, #FAFAFA, #E0E0E0)';
+      case 'nightScan':
+        return 'linear-gradient(135deg, #4C1C8C, #2D1B69)';
+      default: // frequencyPulse
+        return 'linear-gradient(135deg, #FFB000, #FF9F1C)';
+    }
+  }};
   color: ${props => props.hasStamp ? '#000000' : 'rgba(255, 255, 255, 0.4)'};
   font-size: 1.2rem;
   position: relative;
   transition: all 0.3s ease;
   cursor: ${props => props.hasStamp ? 'pointer' : 'default'};
   backdrop-filter: blur(10px);
-  box-shadow: ${props => props.hasStamp 
-    ? 'inset 0 2px 4px rgba(0,0,0,0.2), 0 1px 2px rgba(255,176,0,0.1)' 
-    : 'inset 0 2px 4px rgba(0,0,0,0.1)'};
+  box-shadow: ${props => {
+    const { hasStamp, themeKey } = props;
+    if (!hasStamp) return 'inset 0 2px 4px rgba(0,0,0,0.1)';
+    
+    const glowColor = {
+      solarShine: 'rgba(255,176,0,0.2)',
+      echoGlass: 'rgba(108,108,108,0.2)',
+      retroFrame: 'rgba(250,250,250,0.2)',
+      nightScan: 'rgba(76,28,140,0.2)',
+      frequencyPulse: 'rgba(255,176,0,0.1)'
+    }[themeKey] || 'rgba(255,176,0,0.1)';
+    
+    return `inset 0 2px 4px rgba(0,0,0,0.2), 0 1px 2px ${glowColor}`;
+  }};
 
   /* Indented effect for earned stamps */
   ${props => props.hasStamp && `
@@ -137,10 +311,41 @@ const StampSlot = styled.div`
 
   &:hover {
     transform: ${props => props.hasStamp ? 'translateY(0px) scale(1.02)' : 'none'};
-    box-shadow: ${props => props.hasStamp 
-      ? 'inset 0 1px 2px rgba(0,0,0,0.1), 0 4px 8px rgba(255,176,0,0.2)' 
-      : 'inset 0 2px 4px rgba(0,0,0,0.1)'};
-    border-color: ${props => props.hasStamp ? '#FFB000' : 'rgba(255, 176, 0, 0.5)'};
+    box-shadow: ${props => {
+      const { hasStamp, themeKey } = props;
+      if (!hasStamp) return 'inset 0 2px 4px rgba(0,0,0,0.1)';
+      
+      const glowColor = {
+        solarShine: 'rgba(255,176,0,0.3)',
+        echoGlass: 'rgba(108,108,108,0.3)',
+        retroFrame: 'rgba(250,250,250,0.3)',
+        nightScan: 'rgba(76,28,140,0.3)',
+        frequencyPulse: 'rgba(255,176,0,0.2)'
+      }[themeKey] || 'rgba(255,176,0,0.2)';
+      
+      return `inset 0 1px 2px rgba(0,0,0,0.1), 0 4px 8px ${glowColor}`;
+    }};
+    border-color: ${props => {
+      const { hasStamp, themeKey } = props;
+      if (!hasStamp) {
+        const borderColor = {
+          solarShine: 'rgba(255, 176, 0, 0.6)',
+          echoGlass: 'rgba(108, 108, 108, 0.6)',
+          retroFrame: 'rgba(250, 250, 250, 0.6)',
+          nightScan: 'rgba(76, 28, 140, 0.6)',
+          frequencyPulse: 'rgba(255, 176, 0, 0.5)'
+        }[themeKey] || 'rgba(255, 176, 0, 0.5)';
+        return borderColor;
+      }
+      
+      return {
+        solarShine: '#FFB000',
+        echoGlass: '#6C6C6C',
+        retroFrame: '#FAFAFA',
+        nightScan: '#4C1C8C',
+        frequencyPulse: '#FFB000'
+      }[themeKey] || '#FFB000';
+    }};
   }
 `;
 
@@ -167,24 +372,97 @@ const StampDate = styled.div`
 const ProgressSection = styled.div`
   text-align: center;
   padding: 1rem;
-  background: linear-gradient(135deg, #4C1C8C, #7F3FBF);
+  background: ${({ themeKey }) => {
+    switch (themeKey) {
+      case 'solarShine':
+        return 'linear-gradient(135deg, #FFB000, #FF9F1C)';
+      case 'echoGlass':
+        return 'linear-gradient(135deg, #6C6C6C, #4A4A4A)';
+      case 'retroFrame':
+        return 'linear-gradient(135deg, #FAFAFA, #E0E0E0)';
+      case 'nightScan':
+        return 'linear-gradient(135deg, #4C1C8C, #2D1B69)';
+      default: // frequencyPulse
+        return 'linear-gradient(135deg, #4C1C8C, #7F3FBF)';
+    }
+  }};
   border-radius: 12px;
-  color: #FFFFFF;
-  border: 1px solid #4C1C8C;
-  box-shadow: 0 4px 12px rgba(76, 28, 140, 0.3);
+  color: ${({ themeKey }) => {
+    switch (themeKey) {
+      case 'solarShine':
+      case 'retroFrame':
+        return '#000000';
+      default:
+        return '#FFFFFF';
+    }
+  }};
+  border: 1px solid ${({ themeKey }) => {
+    switch (themeKey) {
+      case 'solarShine':
+        return '#FFB000';
+      case 'echoGlass':
+        return '#6C6C6C';
+      case 'retroFrame':
+        return '#FAFAFA';
+      case 'nightScan':
+        return '#4C1C8C';
+      default: // frequencyPulse
+        return '#4C1C8C';
+    }
+  }};
+  box-shadow: ${({ themeKey }) => {
+    const glowColor = {
+      solarShine: 'rgba(255,176,0,0.4)',
+      echoGlass: 'rgba(108,108,108,0.4)',
+      retroFrame: 'rgba(250,250,250,0.4)',
+      nightScan: 'rgba(76,28,140,0.4)',
+      frequencyPulse: 'rgba(76, 28, 140, 0.3)'
+    }[themeKey] || 'rgba(76, 28, 140, 0.3)';
+    
+    return `0 4px 12px ${glowColor}`;
+  }};
 `;
 
 const ProgressText = styled.div`
   font-family: 'Outfit', sans-serif;
   font-weight: 600;
   font-size: 1.1rem;
-  color: #FFFFFF;
+  color: inherit;
+`;
+
+// Theme indicator component
+const ThemeIndicator = styled.div`
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-family: 'Space Grotesk', sans-serif;
+  backdrop-filter: blur(10px);
+  border: 1px solid ${({ themeKey }) => {
+    switch (themeKey) {
+      case 'solarShine':
+        return 'rgba(255,176,0,0.3)';
+      case 'echoGlass':
+        return 'rgba(108,108,108,0.3)';
+      case 'retroFrame':
+        return 'rgba(250,250,250,0.3)';
+      case 'nightScan':
+        return 'rgba(76,28,140,0.3)';
+      default: // frequencyPulse
+        return 'rgba(255,176,0,0.3)';
+    }
+  }};
 `;
 
 const PassportScreen = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { stamps, loading } = useStamps();
+  const { equippedTheme } = useThemes();
   const [selectedStamp, setSelectedStamp] = useState(null);
 
   // Define all possible stamps for the 3x3 grid
@@ -223,13 +501,32 @@ const PassportScreen = () => {
     setSelectedStamp(null);
   };
 
+  // Get theme name for display
+  const getThemeName = (themeKey) => {
+    const themeNames = {
+      frequencyPulse: 'Frequency Pulse',
+      solarShine: 'Solar Shine',
+      echoGlass: 'Echo Glass',
+      retroFrame: 'Retro Frame',
+      nightScan: 'Night Scan'
+    };
+    return themeNames[themeKey] || 'Frequency Pulse';
+  };
+
   return (
     <Container>
-      <PassportBook>
-        <PassportHeader>
-          <SeasonTitle>Fall 2025 - Digital Genesis</SeasonTitle>
-          <PassportTitle>Find Your Wings</PassportTitle>
-          <PassportSubtitle>
+      <PassportBook 
+        themeKey={equippedTheme}
+        themeGradient={gradientThemes[equippedTheme]?.gradient}
+      >
+        <ThemeIndicator themeKey={equippedTheme}>
+          {getThemeName(equippedTheme)} Theme
+        </ThemeIndicator>
+        
+        <PassportHeader themeKey={equippedTheme}>
+          <SeasonTitle themeKey={equippedTheme}>Fall 2025 - Digital Genesis</SeasonTitle>
+          <PassportTitle themeKey={equippedTheme}>Find Your Wings</PassportTitle>
+          <PassportSubtitle themeKey={equippedTheme}>
             {user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Collector'}
           </PassportSubtitle>
         </PassportHeader>
@@ -243,6 +540,7 @@ const PassportScreen = () => {
               <StampSlot 
                 key={stamp.id} 
                 hasStamp={hasStamp}
+                themeKey={equippedTheme}
                 onClick={() => handleStampClick(stamp)}
               >
                 {/* Empty state - no emoji or name */}
@@ -251,7 +549,7 @@ const PassportScreen = () => {
           })}
         </StampsGrid>
 
-        <ProgressSection>
+        <ProgressSection themeKey={equippedTheme}>
           <ProgressText>
             {completedCount}/9 Stamps Collected
           </ProgressText>
