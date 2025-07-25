@@ -20,7 +20,7 @@ import ProfileScreen from './screens/ProfileScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import QuestsScreen from './screens/QuestsScreen';
 import LoginScreen from './screens/LoginScreen';
-import AdminScreen from './screens/AdminScreen';
+import AdminDashboard from './screens/AdminDashboard';
 import CircularQRGenerator from './components/CircularQRGenerator';
 
 import NavBar from './components/NavBar';
@@ -94,7 +94,7 @@ function App() {
               <Route path="/login" element={<LoginScreen />} />
               <Route path="/generate-qr" element={<CircularQRGenerator />} />
               <Route element={<ProtectedRoute />}>
-                <Route path="/admin" element={<AdminScreen />} />
+                <Route path="/admin" element={<AdminDashboard />} />
               </Route>
             </Routes>
           </AnimatePresence>

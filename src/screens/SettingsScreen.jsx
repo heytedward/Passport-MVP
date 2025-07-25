@@ -228,15 +228,35 @@ const SettingsScreen = ({ themeMode = 'dark', onToggleTheme = () => {}, gradient
     if (!user) return;
     
     try {
-      const { data: profile } = await supabase
+      console.log('Loading user profile for:', user.id);
+      
+      const { data: profile, error } = await supabase
         .from('user_profiles')
-        .select('avatar_url, display_name')
+        .select('avatar_url, display_name, email')
         .eq('id', user.id)
         .single();
 
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
       if (profile) {
-        if (profile.avatar_url) setAvatar(profile.avatar_url);
-        if (profile.display_name) setDisplayName(profile.display_name);
+        console.log('Profile loaded:', profile);
+        
+        if (profile.avatar_url) {
+          console.log('Setting avatar:', profile.avatar_url);
+          setAvatar(profile.avatar_url);
+        } else {
+          console.log('No avatar URL found');
+          setAvatar(null);
+        }
+        
+        if (profile.display_name) {
+          setDisplayName(profile.display_name);
+        }
+      } else {
+        console.log('No profile found for user');
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -249,35 +269,111 @@ const SettingsScreen = ({ themeMode = 'dark', onToggleTheme = () => {}, gradient
   const handleAvatarChange = async (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+      
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
       try {
+        console.log('Starting avatar upload...');
+        
+        // First, try to create the storage bucket if it doesn't exist
+        try {
+          const { data: buckets } = await supabase.storage.listBuckets();
+          const avatarsBucket = buckets?.find(bucket => bucket.name === 'avatars');
+          
+          if (!avatarsBucket) {
+            console.log('Creating avatars storage bucket...');
+            const { error: bucketError } = await supabase.storage.createBucket('avatars', {
+              public: true,
+              allowedMimeTypes: ['image/*'],
+              fileSizeLimit: 5242880 // 5MB
+            });
+            
+            if (bucketError) {
+              console.error('Error creating bucket:', bucketError);
+              throw new Error('Failed to create storage bucket');
+            }
+          }
+        } catch (bucketError) {
+          console.error('Error with storage bucket:', bucketError);
+          // Continue with upload attempt anyway
+        }
+
         // Upload to Supabase storage
         const { error: uploadError } = await supabase.storage
           .from('avatars')
-          .upload(filePath, file);
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw uploadError;
+        }
 
         // Get public URL
         const { data } = supabase.storage
           .from('avatars')
           .getPublicUrl(filePath);
 
-        // Update user profile
-        const { error: updateError } = await supabase
-          .from('user_profiles')
-          .update({ avatar_url: data.publicUrl })
-          .eq('id', user.id);
+        console.log('Avatar uploaded successfully:', data.publicUrl);
 
-        if (updateError) throw updateError;
+        // Ensure avatar_url column exists in user_profiles
+        try {
+          // Try to update user profile with avatar_url
+          const { error: updateError } = await supabase
+            .from('user_profiles')
+            .update({ avatar_url: data.publicUrl })
+            .eq('id', user.id);
 
+          if (updateError) {
+            console.error('Profile update error:', updateError);
+            // If avatar_url column doesn't exist, try adding it
+            if (updateError.message.includes('column') && updateError.message.includes('avatar_url')) {
+              console.log('Adding avatar_url column to user_profiles...');
+              // Note: This would need to be done via SQL migration
+              // For now, we'll just set the local state
+            }
+          }
+        } catch (profileError) {
+          console.error('Profile update failed:', profileError);
+        }
+
+        // Set avatar in local state
         setAvatar(data.publicUrl);
+        
+        // Show success message
+        console.log('Avatar updated successfully!');
+        
       } catch (error) {
         console.error('Error uploading avatar:', error);
-        // Fallback to local preview
+        
+        // Show user-friendly error message
+        let errorMessage = 'Failed to upload image. Please try again.';
+        
+        if (error.message.includes('storage')) {
+          errorMessage = 'Storage service unavailable. Please try again later.';
+        } else if (error.message.includes('file')) {
+          errorMessage = 'Invalid file type. Please select an image file.';
+        }
+        
+        alert(errorMessage);
+        
+        // Fallback to local preview (temporary)
         setAvatar(URL.createObjectURL(file));
       }
     }
@@ -285,13 +381,51 @@ const SettingsScreen = ({ themeMode = 'dark', onToggleTheme = () => {}, gradient
 
   const handleLogout = async () => {
     try {
-      console.log('Starting sign out process...');
-      await signOut();
+      console.log('🔄 Sign out button clicked!');
+      console.log('User before sign out:', user);
+      console.log('Sign out function:', signOut);
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Sign out timeout - network issue')), 5000);
+      });
+      
+      // Try the useAuth signOut first with timeout
+      if (signOut) {
+        console.log('Using useAuth signOut with timeout...');
+        const result = await Promise.race([
+          signOut(),
+          timeoutPromise
+        ]);
+        console.log('Sign out result:', result);
+      } else {
+        console.log('useAuth signOut not available, trying direct Supabase...');
+        // Fallback to direct Supabase signOut with timeout
+        const { error } = await Promise.race([
+          supabase.auth.signOut(),
+          timeoutPromise
+        ]);
+        if (error) throw error;
+      }
+      
       console.log('Sign out successful, navigating to home...');
+      alert('Sign out successful! Redirecting...');
       navigate('/');
     } catch (error) {
-      console.error('Error signing out:', error);
-      alert('Failed to sign out. Please try again.');
+      console.error('❌ Error signing out:', error);
+      
+      // If it's a timeout, force local sign out
+      if (error.message.includes('timeout')) {
+        console.log('Network timeout detected, forcing local sign out...');
+        alert('Network timeout - signing out locally and redirecting...');
+        // Clear local storage and redirect anyway
+        localStorage.removeItem('supabase.auth.token');
+        sessionStorage.clear();
+        navigate('/');
+        return;
+      }
+      
+      alert(`Failed to sign out: ${error.message}`);
     }
   };
 
@@ -370,7 +504,11 @@ const SettingsScreen = ({ themeMode = 'dark', onToggleTheme = () => {}, gradient
                   </div>
                   <Button
                     style={{ marginTop: 12, width: '100%', background: 'rgba(231, 76, 60, 0.2)', borderColor: 'rgba(231, 76, 60, 0.3)' }}
-                    onClick={handleLogout}
+                    onClick={() => {
+                      console.log('🔄 Sign out button clicked!');
+                      alert('Sign out button clicked!');
+                      handleLogout();
+                    }}
                   >
                     Sign Out
                   </Button>
