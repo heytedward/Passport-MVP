@@ -99,6 +99,27 @@ const BalanceLabel = styled.div`
   margin-bottom: 8px;
 `;
 
+const Button = styled.button`
+  background: ${({ theme }) => theme.colors.accent};
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
 const BalanceValue = styled.div`
   font-family: ${({ theme }) => theme.typography.fontFamily.heading};
   color: ${({ theme }) => theme.colors.secondary};
@@ -686,7 +707,7 @@ function ProfileScreen() {
             setProfile({
               name: userProfile.username || user.user_metadata?.username || user.email?.split('@')[0],
               email: user.email,
-              avatar: null,
+              avatar: userProfile.avatar_url || null,
               joinDate: new Date(user.created_at).toLocaleDateString(),
               totalWings: userProfile.wings_balance || 0,
               level: Math.floor((userProfile.wings_balance || 0) / 100) + 1,
@@ -777,8 +798,21 @@ function ProfileScreen() {
       <TopRow>
         <ProfileHeader onClick={() => navigate('/settings')}>
           <Avatar>
-            {user?.user_metadata?.username ? user.user_metadata.username.charAt(0).toUpperCase() : 
-             user?.email ? user.email.charAt(0).toUpperCase() : 'U'}
+            {profile?.avatar ? (
+              <img 
+                src={profile.avatar} 
+                alt="Profile" 
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  objectFit: 'cover'
+                }}
+              />
+            ) : (
+              user?.user_metadata?.username ? user.user_metadata.username.charAt(0).toUpperCase() : 
+              user?.email ? user.email.charAt(0).toUpperCase() : 'U'
+            )}
           </Avatar>
           <ProfileName>
             {user?.user_metadata?.username || user?.email?.split('@')[0] || 'User'}

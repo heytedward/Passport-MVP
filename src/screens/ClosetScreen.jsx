@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { createClient } from '@supabase/supabase-js';
+import { useNavigate } from 'react-router-dom';
 import GlassCard from '../components/GlassCard';
 import { useThemes } from '../hooks/useThemes';
 import { gradientThemes } from '../styles/theme';
@@ -651,8 +652,9 @@ const Description = styled.div`
 
 // Item Modal Component (using exact passport logic)
 const ItemModal = ({ item, isOpen, onClose }) => {
-  const { equipTheme } = useThemes();
+  const { equipTheme, userProgress } = useThemes();
   const [isFlipped, setIsFlipped] = useState(false);
+  const navigate = useNavigate();
   
   if (!isOpen || !item) return null;
   
@@ -673,10 +675,30 @@ const ItemModal = ({ item, isOpen, onClose }) => {
     }
   };
 
-  const handleEquipTheme = () => {
+  const handleEquipTheme = async () => {
     if (item.category === 'themes' && item.unlocked) {
-      equipTheme(item.item_id);
-      onClose();
+      const success = await equipTheme(item.item_id);
+      if (success) {
+        onClose();
+        // Navigate to passport to see the immediate change
+        navigate('/passport');
+      }
+    }
+  };
+
+  // Helper function to get progress for requirements
+  const getProgressForRequirement = (req) => {
+    switch (req.id) {
+      case 'first_scan':
+        return userProgress.totalScans;
+      case 'quests':
+        return userProgress.totalQuests;
+      case 'items':
+        return userProgress.totalItems;
+      case 'wings':
+        return userProgress.totalWings;
+      default:
+        return 0;
     }
   };
 
@@ -727,23 +749,6 @@ const ItemModal = ({ item, isOpen, onClose }) => {
             ) : (
               <ModalDetails>#{item.mint_number}</ModalDetails>
             )}
-            {item.category === 'themes' && item.unlocked && !item.equipped && (
-              <button 
-                onClick={(e) => { e.stopPropagation(); handleEquipTheme(); }}
-                style={{
-                  background: '#FFD700',
-                  color: '#000',
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '12px 24px',
-                  fontWeight: 'bold',
-                  marginTop: '1rem',
-                  cursor: 'pointer'
-                }}
-              >
-                Equip Theme
-              </button>
-            )}
             {item.category === 'themes' && item.equipped && (
               <div style={{ color: '#FFD700', marginTop: '1rem', fontWeight: 'bold' }}>
                 ✓ Currently Equipped
@@ -754,6 +759,12 @@ const ItemModal = ({ item, isOpen, onClose }) => {
           <BackFace onClick={() => setIsFlipped(false)}>
             {item.category === 'themes' ? (
               <>
+                {console.log('Modal item:', { 
+                  name: item.name, 
+                  unlocked: item.unlocked, 
+                  equipped: item.equipped,
+                  requirements: item.requirements 
+                })}
                 <ModalTitle>Unlock Requirements</ModalTitle>
                 <ModalDetails>
                   <div style={{ textAlign: 'left', lineHeight: '2' }}>
@@ -762,20 +773,58 @@ const ItemModal = ({ item, isOpen, onClose }) => {
                         display: 'flex', 
                         alignItems: 'center', 
                         marginBottom: '12px',
-                        color: item.unlocked ? '#10B981' : '#fff'
+                        color: req.completed ? '#10B981' : '#fff'
                       }}>
                         <span style={{ marginRight: '12px', fontSize: '1.2rem' }}>
-                          {item.unlocked ? '✅' : '⭕'}
+                          {req.completed ? '✅' : '⭕'}
                         </span>
-                        {req}
+                        {req.text}
+                        {req.target && (
+                          <span style={{ 
+                            marginLeft: '8px', 
+                            fontSize: '0.9rem', 
+                            opacity: 0.7,
+                            color: req.completed ? '#10B981' : '#fff'
+                          }}>
+                            ({getProgressForRequirement(req)}/{req.target})
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>
                 </ModalDetails>
-                {!item.unlocked && (
+                {!item.unlocked ? (
                   <ModalDescription style={{ color: '#ff6b6b', marginTop: '1rem' }}>
                     Complete the requirements above to unlock this theme!
                   </ModalDescription>
+                ) : (
+                  <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleEquipTheme(); }}
+                      style={{
+                        background: 'linear-gradient(135deg, #FFB000 0%, #FF9F1C 100%)',
+                        color: '#000',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '16px 32px',
+                        fontWeight: 'bold',
+                        fontSize: '1.1rem',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(255, 176, 0, 0.3)',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.transform = 'translateY(-2px)';
+                        e.target.style.boxShadow = '0 6px 16px rgba(255, 176, 0, 0.4)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.transform = 'translateY(0)';
+                        e.target.style.boxShadow = '0 4px 12px rgba(255, 176, 0, 0.3)';
+                      }}
+                    >
+                      🎨 Equip Theme
+                    </button>
+                  </div>
                 )}
               </>
             ) : (
@@ -799,13 +848,14 @@ const ItemModal = ({ item, isOpen, onClose }) => {
 };
 
 const ClosetScreen = () => {
-  const { ownedThemes, equippedTheme, equipTheme, checkThemeOwnership } = useThemes();
+  const { ownedThemes, equippedTheme, equipTheme, checkThemeOwnership, getThemeRequirements, userProgress } = useThemes();
   const [mainFilter, setMainFilter] = useState('all'); // 'all', 'physical', 'digital'
   const [subFilter, setSubFilter] = useState('all');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Get current user
@@ -827,16 +877,16 @@ const ClosetScreen = () => {
         if (user) {
           await loadUserItems(user.id);
         } else {
-          // If no user, show mock data for demo
-          console.log('No authenticated user, using mock data');
-          setItems(mockClosetItems);
+          // If no user, show empty state
+          console.log('No authenticated user, showing empty state');
+          setItems([]);
           setLoading(false);
         }
       } catch (error) {
         console.error('Error getting user:', error);
-        console.log('Auth error, falling back to mock data');
-        // On any error, fall back to mock data immediately
-        setItems(mockClosetItems);
+        console.log('Auth error, showing empty state');
+        // On any error, show empty state
+        setItems([]);
         setLoading(false);
       }
     };
@@ -850,8 +900,8 @@ const ClosetScreen = () => {
       
       // Check if supabase is properly configured
       if (!process.env.REACT_APP_SUPABASE_URL || !process.env.REACT_APP_SUPABASE_ANON_KEY) {
-        console.log('Supabase not configured, using mock data');
-        setItems(mockClosetItems);
+        console.log('Supabase not configured, showing empty state');
+        setItems([]);
         setLoading(false);
         return;
       }
@@ -876,43 +926,48 @@ const ClosetScreen = () => {
 
       console.log('Database query successful, items found:', closetItems?.length || 0);
 
-      // If no items from database, use mock data for demo
-      if (!closetItems || closetItems.length === 0) {
-        console.log('No items in database, using mock data');
-        setItems(mockClosetItems);
-      } else {
-        console.log('Using database items');
-        setItems(closetItems);
-      }
+      // Use real database items or empty array
+      setItems(closetItems || []);
     } catch (error) {
       console.error('Error loading closet items:', error);
-      console.log('Falling back to mock data');
-      // On error, fall back to mock data
-      setItems(mockClosetItems);
+      console.log('Error occurred, showing empty state');
+      // On error, show empty state
+      setItems([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Convert themes to digital items
+  // Convert themes to digital items with proper requirements
   const getThemeItems = () => {
-    return Object.entries(gradientThemes).map(([key, theme], index) => ({
-      id: `theme-${key}`,
-      item_type: 'digital_collectible',
-      item_id: key,
-      name: theme.name,
-      rarity: themeUnlockRequirements[key]?.rarity || 'common',
-      category: 'themes',
-      gradient: theme.gradient,
-      icon: themeUnlockRequirements[key]?.icon || '🎨',
-      description: themeUnlockRequirements[key]?.description || '',
-      requirements: themeUnlockRequirements[key]?.requirements || [],
-      unlocked: checkThemeOwnership(key),
-      equipped: equippedTheme === key,
-      earned_date: '2025-03-01',
-      earned_via: 'unlock',
-      wings_earned: 0
-    }));
+    return Object.entries(gradientThemes).map(([key, theme]) => {
+      const themeRequirements = getThemeRequirements(key);
+      const isUnlocked = checkThemeOwnership(key);
+      
+      console.log(`Theme ${key}:`, { 
+        isUnlocked, 
+        ownedThemes: ownedThemes, 
+        requirements: themeRequirements 
+      });
+      
+      return {
+        id: `theme-${key}`,
+        item_type: 'digital_collectible',
+        item_id: key,
+        name: theme.name,
+        rarity: 'epic', // All themes are epic rarity
+        category: 'themes',
+        gradient: theme.gradient,
+        icon: '🎨',
+        description: themeRequirements?.description || '',
+        requirements: themeRequirements?.requirements || [],
+        unlocked: true, // TEMPORARY: Force all themes unlocked for testing
+        equipped: equippedTheme === key,
+        earned_date: '2025-03-01',
+        earned_via: 'unlock',
+        wings_earned: 0
+      };
+    });
   };
 
   // Combine regular items with theme items
@@ -1096,10 +1151,25 @@ const ClosetScreen = () => {
         </ItemsGrid>
       ) : (
         <EmptyState>
-          {mainFilter === 'all' 
-            ? 'Your closet is empty. Start scanning QR codes to collect items!'
-            : `No ${mainFilter} items found. Try scanning more QR codes or check other categories.`
-          }
+          {loading ? (
+            <>
+              <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⏳</div>
+              <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Loading your closet...</div>
+              <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)' }}>Checking for your Papillon treasures</div>
+            </>
+          ) : mainFilter === 'all' ? (
+            <>
+              <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>👕</div>
+              <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Your closet is looking a bit empty...</div>
+              <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)' }}>Start scanning QR codes to collect your first Papillon items!</div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔍</div>
+              <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>No {mainFilter} items found</div>
+              <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)' }}>Try scanning more QR codes or check other categories</div>
+            </>
+          )}
         </EmptyState>
       )}
 

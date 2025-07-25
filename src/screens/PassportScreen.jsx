@@ -190,7 +190,7 @@ const PassportScreen = () => {
   // Define all possible stamps for the 3x3 grid
   const allStamps = [
     { id: 'received_passport', name: 'Welcome', icon: '🎫', description: 'Joined Monarch', rarity: 'Common' },
-    { id: 'morning_gm', name: 'Morning GM', icon: '☀️', description: 'Said GM', rarity: 'Common' },
+    { id: 'morning_gm', name: 'GM', icon: '☀️', description: 'Said GM', rarity: 'Common' },
     { id: 'first_item', name: 'First Scan', icon: '👕', description: 'First Item', rarity: 'Common' },
     { id: 'qr_scanner', name: 'Scanner', icon: '📱', description: 'QR Expert', rarity: 'Rare' },
     { id: 'social_share', name: 'Social', icon: '📣', description: 'Shared Story', rarity: 'Rare' },
@@ -200,10 +200,8 @@ const PassportScreen = () => {
     { id: 'master_collector', name: 'Master', icon: '👑', description: 'All Stamps', rarity: 'Legendary' }
   ];
 
-  const earnedStamps = stamps.reduce((acc, stamp) => {
-    acc[stamp.stamp_id] = stamp;
-    return acc;
-  }, {});
+  // TEMPORARY: Show no earned stamps for testing
+  const earnedStamps = {};
 
   const completedCount = Object.keys(earnedStamps).length;
 
@@ -247,13 +245,7 @@ const PassportScreen = () => {
                 hasStamp={hasStamp}
                 onClick={() => handleStampClick(stamp)}
               >
-                <StampIcon>{stamp.icon}</StampIcon>
-                <StampName>{stamp.name}</StampName>
-                {hasStamp && earnedStamp.earned_at && (
-                  <StampDate>
-                    {new Date(earnedStamp.earned_at).toLocaleDateString()}
-                  </StampDate>
-                )}
+                {/* Empty state - no emoji or name */}
               </StampSlot>
             );
           })}
@@ -267,7 +259,7 @@ const PassportScreen = () => {
             {completedCount === 9 ? '🎉 Master Collector!' : 
              completedCount >= 6 ? '🔥 Almost there!' :
              completedCount >= 3 ? '⭐ Great progress!' :
-             '🌱 Just getting started!'}
+             'Just getting started!'}
           </ProgressText>
         </ProgressSection>
       </PassportBook>
