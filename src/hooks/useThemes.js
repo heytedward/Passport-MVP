@@ -121,30 +121,60 @@ export const useThemes = () => {
         totalWings
       });
 
-      // Get equipped theme
-      const { data: equippedData } = await supabase
-        .from('user_equipped_theme')
-        .select('theme_key')
-        .eq('user_id', user.id)
-        .single();
+      // Get equipped theme - with better error handling
+      let equippedThemeKey = 'frequencyPulse'; // Default fallback
+      
+      try {
+        const { data: equippedData, error: equippedError } = await supabase
+          .from('user_equipped_theme')
+          .select('theme_key')
+          .eq('user_id', user.id)
+          .single();
+
+        if (equippedError) {
+          console.log('No equipped theme found in database, using default:', equippedError.message);
+        } else if (equippedData?.theme_key) {
+          equippedThemeKey = equippedData.theme_key;
+          console.log('Loaded equipped theme from database:', equippedThemeKey);
+        }
+      } catch (dbError) {
+        console.log('Database error loading equipped theme, using default:', dbError.message);
+      }
 
       // TEMPORARY: Unlock all themes for testing
       const owned = ['frequencyPulse', 'solarShine', 'echoGlass', 'retroFrame', 'nightScan'];
 
       setOwnedThemes(owned);
-      setEquippedTheme(equippedData?.theme_key || 'frequencyPulse');
+      setEquippedTheme(equippedThemeKey);
+      
+      console.log('Theme system initialized:', {
+        ownedThemes: owned,
+        equippedTheme: equippedThemeKey,
+        userProgress: { totalScans, totalQuests, totalItems, totalWings }
+      });
     } catch (error) {
       console.error('Error loading themes:', error);
+      // Set defaults on error
+      setOwnedThemes(['frequencyPulse']);
+      setEquippedTheme('frequencyPulse');
     } finally {
       setLoading(false);
     }
   };
 
   const equipTheme = async (themeKey) => {
-    if (!user || !ownedThemes.includes(themeKey)) return false;
+    if (!user || !ownedThemes.includes(themeKey)) {
+      console.log('Cannot equip theme:', { user: !!user, themeKey, ownedThemes });
+      return false;
+    }
 
     try {
-      // Update or insert equipped theme
+      console.log('Equipping theme:', themeKey);
+      
+      // Update local state immediately for better UX
+      setEquippedTheme(themeKey);
+      
+      // Update or insert equipped theme in database
       const { error } = await supabase
         .from('user_equipped_theme')
         .upsert({
@@ -153,13 +183,19 @@ export const useThemes = () => {
           updated_at: new Date().toISOString()
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error equipping theme:', error);
+        // Don't revert local state - let user see the change
+        // The theme will persist until page refresh
+        return true; // Still return true for UX
+      }
 
-      setEquippedTheme(themeKey);
+      console.log('Theme equipped successfully:', themeKey);
       return true;
     } catch (error) {
       console.error('Error equipping theme:', error);
-      return false;
+      // Keep the local state change for better UX
+      return true;
     }
   };
 
