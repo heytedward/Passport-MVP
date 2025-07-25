@@ -1,37 +1,254 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# 🔒 COMPREHENSIVE .GITIGNORE FOR MONARCH PASSPORT MVP
+# This file prevents sensitive data from being committed to version control
 
-# dependencies
+# ========================================
+# 🚨 CRITICAL: ENVIRONMENT & SECRETS
+# ========================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging
+.env.development
+.env.production
+
+# Environment variable files
+*.env
+*.env.*
+env.*
+environment.*
+secrets.*
+config.secret.*
+
+# API Keys and Credentials
+**/api-keys.*
+**/credentials.*
+**/secrets.*
+**/private-key*
+**/service-account*
+*.pem
+*.key
+*.p8
+*.p12
+*.mobileprovision
+
+# ========================================
+# 🔒 SECURITY & AUTHENTICATION
+# ========================================
+# JWT tokens
+**/jwt-*
+**/token*
+**/auth-token*
+
+# SSL/TLS certificates
+*.crt
+*.cert
+*.ca-bundle
+*.p7b
+*.p7c
+*.pfx
+
+# Password files
+**/passwords.*
+**/passwd*
+**/shadow*
+
+# ========================================
+# 📦 DEPENDENCIES & BUILD
+# ========================================
+# Dependencies
 node_modules/
+bower_components/
+jspm_packages/
+
+# Build outputs
+build/
+dist/
+out/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
 
 # Expo
 .expo/
-dist/
 web-build/
 expo-env.d.ts
 
-# Native
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+# ========================================
+# 🔍 DEBUGGING & LOGS
+# ========================================
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
 
-# Metro
-.metro-health-check*
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
 
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+.nyc_output
 
-# macOS
+# ========================================
+# 💻 DEVELOPMENT TOOLS
+# ========================================
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
 .DS_Store
-*.pem
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# local env files
-.env*.local
+# ========================================
+# 🔧 FRAMEWORK SPECIFIC
+# ========================================
+# React
+.eslintcache
 
-# typescript
+# TypeScript
 *.tsbuildinfo
+
+# Vercel
 .vercel
+
+# Next.js
+.next/
+next-env.d.ts
+
+# ========================================
+# 🗄️ DATABASE & BACKUPS
+# ========================================
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Database dumps
+*.sql.gz
+*.dump
+*.backup
+
+# ========================================
+# 🧪 TESTING
+# ========================================
+# Test files that might contain sensitive data
+**/test-credentials.*
+**/mock-data-real.*
+**/fixtures/real-*
+
+# ========================================
+# 📊 ANALYTICS & MONITORING
+# ========================================
+# Error tracking
+.sentry/
+
+# Analytics
+**/analytics-*
+**/tracking-*
+
+# ========================================
+# 🎯 PROJECT SPECIFIC
+# ========================================
+# Monarch Passport specific files
+**/qr-codes/private/
+**/user-uploads/
+**/admin-files/
+**/security-reports/
+**/incident-logs/
+
+# Security scanner reports
+security-report.json
+security-alerts.log
+security-monitor.log
+security-summary-*.json
+
+# Temporary development files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Archive files that might contain sensitive data
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# ========================================
+# 🚫 NEVER COMMIT THESE PATTERNS
+# ========================================
+# Files with 'secret', 'private', 'confidential' in name
+*secret*
+*private*
+*confidential*
+*internal*
+
+# Common password/key file patterns
+*password*
+*passwd*
+*credentials*
+*auth*
+*token*
+*key*
+
+# Backup files that might contain sensitive data
+*.bak
+*.backup
+*.old
+*.orig
+
+# ========================================
+# 📝 DOCUMENTATION EXCEPTIONS
+# ========================================
+# Allow important documentation
+!README.md
+!SECURITY.md
+!CONTRIBUTING.md
+!LICENSE
+!CHANGELOG.md
+
+# Allow example files (but not real config)
+!.env.example
+!config.example.*
+!secrets.example.*
+
+# ========================================
+# ✅ VERIFICATION PATTERNS
+# ========================================
+# Patterns to help verify this file is working
+# If you see any of these in your repo, update .gitignore:
+#   - No .env files should appear in git status
+#   - No *secret* files should appear in git status
+#   - No API keys should be visible in commits
+#   - No password files should be tracked
+
+# ========================================
+# 📚 ADDITIONAL NOTES
+# ========================================
+# Remember to:
+# 1. Run 'git status' regularly to check for untracked sensitive files
+# 2. Use 'git-secrets' tool for additional protection
+# 3. Set up pre-commit hooks to scan for secrets
+# 4. Regularly audit your repository for accidentally committed secrets
+# 5. Use environment variables for all sensitive configuration
+
+# Last updated: January 2025
+# Review quarterly and after any security incidents
