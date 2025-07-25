@@ -430,17 +430,28 @@ const ProgressText = styled.div`
   color: inherit;
 `;
 
-// Theme indicator component
 const ThemeIndicator = styled.div`
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 0.5rem 1rem;
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  color: ${({ themeKey }) => {
+    switch (themeKey) {
+      case 'solarShine':
+        return '#FFB000';
+      case 'echoGlass':
+        return '#6C6C6C';
+      case 'retroFrame':
+        return '#FAFAFA';
+      case 'nightScan':
+        return '#4C1C8C';
+      default: // frequencyPulse
+        return '#FFB000';
+    }
+  }};
   border-radius: 20px;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
   backdrop-filter: blur(10px);
   border: 1px solid ${({ themeKey }) => {
     switch (themeKey) {
@@ -456,6 +467,7 @@ const ThemeIndicator = styled.div`
         return 'rgba(255,176,0,0.3)';
     }
   }};
+  display: inline-block;
 `;
 
 const PassportScreen = () => {
@@ -519,9 +531,6 @@ const PassportScreen = () => {
         themeKey={equippedTheme}
         themeGradient={gradientThemes[equippedTheme]?.gradient}
       >
-        <ThemeIndicator themeKey={equippedTheme}>
-          {getThemeName(equippedTheme)} Theme
-        </ThemeIndicator>
         
         <PassportHeader themeKey={equippedTheme}>
           <SeasonTitle themeKey={equippedTheme}>Fall 2025 - Digital Genesis</SeasonTitle>
@@ -559,6 +568,9 @@ const PassportScreen = () => {
              completedCount >= 3 ? '⭐ Great progress!' :
              'Just getting started!'}
           </ProgressText>
+          <ThemeIndicator themeKey={equippedTheme}>
+            Theme: {getThemeName(equippedTheme)}
+          </ThemeIndicator>
         </ProgressSection>
       </PassportBook>
 
