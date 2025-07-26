@@ -917,9 +917,8 @@ const ScanScreen = () => {
       console.log('🔍 Step 9: Showing reward modal...');
       // Show reward modal
       setReward({
-        ...rewardData,
-        mintNumber: closetItem.mint_number,
-        wingsEarned
+        ...staticReward,
+        claimResult
       });
       console.log('✅ Processing complete!');
 

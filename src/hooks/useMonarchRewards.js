@@ -378,9 +378,9 @@ export const useMonarchRewardsAdmin = () => {
   }, []);
 
   // Validate reward configuration
-  const validateConfiguration = useCallback(() => {
+  const validateConfiguration = useCallback(async () => {
     try {
-      const { validateRewardConfiguration: validateFunction } = require('../utils/rewardIntegration');
+      const { validateRewardConfiguration: validateFunction } = await import('../utils/rewardIntegration');
       return validateFunction();
     } catch (err) {
       console.error('Error validating configuration:', err);

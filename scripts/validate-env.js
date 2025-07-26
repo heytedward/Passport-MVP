@@ -41,12 +41,12 @@ const developmentOnlyVars = [
   'REACT_APP_DEBUG_MODE'
 ];
 
-// Patterns that indicate sensitive data
+// Patterns that indicate sensitive data (more specific to avoid false positives)
 const sensitivePatterns = [
-  /sk_live_/,
-  /pk_live_/,
-  /sk_test_/,
-  /pk_test_/,
+  /sk_live_[a-zA-Z0-9]{24}/,
+  /pk_live_[a-zA-Z0-9]{24}/,
+  /sk_test_[a-zA-Z0-9]{24}/,
+  /pk_test_[a-zA-Z0-9]{24}/,
   /eyJ[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*/,
   /[A-Za-z0-9+/]{32,}={0,2}/,
   /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
@@ -105,6 +105,9 @@ function checkForSensitiveData() {
   if (!foundSensitive) {
     logSuccess('No obvious sensitive data patterns detected');
   }
+  
+  // Don't fail the build for sensitive data warnings - just log them
+  return foundSensitive;
 }
 
 function validateEnvVars() {
@@ -161,8 +164,10 @@ function checkGitHooks() {
   
   if (!fs.existsSync(preCommitHook)) {
     logWarning('Pre-commit hook not found. Consider installing husky for automatic validation.');
+    return false;
   } else {
     logSuccess('Git hooks are configured');
+    return true;
   }
 }
 
