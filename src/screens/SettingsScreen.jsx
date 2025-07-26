@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useThemes } from '../hooks/useThemes';
 import { gradientThemes } from '../styles/theme';
+import { performAuthCleanup, forcePageReload, emergencyCleanup } from '../utils/authCleanup';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -79,11 +80,22 @@ const Label = styled.label`
 
 const Input = styled.input`
   font-size: 1.08rem;
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid ${({ theme }) => theme.colors.glass};
+  border: 2px solid ${({ theme }) => theme.colors.glass};
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.text.primary};
+  transition: all 0.2s ease;
+  
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.accent.gold};
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+  }
+  
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.accent.gold};
+  }
 `;
 
 const Toggle = styled.input.attrs({ type: 'checkbox' })`
@@ -104,6 +116,7 @@ const AvatarImg = styled.img`
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid ${({ theme }) => theme.colors.accent};
+  position: relative;
 `;
 
 const AvatarPlaceholder = styled.div`
@@ -117,6 +130,23 @@ const AvatarPlaceholder = styled.div`
   color: #fff;
   font-size: 2rem;
   border: 2px solid ${({ theme }) => theme.colors.accent};
+  position: relative;
+`;
+
+const AvatarLoadingOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.2rem;
+  backdrop-filter: blur(2px);
 `;
 
 const Button = styled.button`
@@ -140,13 +170,30 @@ const SocialAccounts = styled.div`
   gap: 12px;
 `;
 
-const SocialIcon = styled.img`
+const SocialIcon = styled.div`
   width: 32px;
   height: 32px;
   border-radius: 50%;
   background: #fff;
   border: 1.5px solid ${({ theme }) => theme.colors.glass};
   padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: #000;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.1);
+    border-color: ${({ theme }) => theme.colors.accent.gold};
+  }
+`;
+
+const SocialIconImg = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 `;
 
 const GradientSwatchRow = styled.div`
@@ -219,12 +266,16 @@ const SettingsScreen = ({
   const { ownedThemes, equippedTheme, equipTheme, checkThemeOwnership } = useThemes();
   const [open, setOpen] = useState('account');
   const [displayName, setDisplayName] = useState('');
+  const [originalDisplayName, setOriginalDisplayName] = useState('');
   const [emailPref, setEmailPref] = useState(true);
+  const [avatarLoading, setAvatarLoading] = useState(false);
 
   // Update display name and avatar when user changes
   useEffect(() => {
     if (user) {
-      setDisplayName(user.user_metadata?.username || user.email?.split('@')[0] || 'User');
+      const name = user.user_metadata?.username || user.email?.split('@')[0] || 'User';
+      setDisplayName(name);
+      setOriginalDisplayName(name);
       loadUserProfile();
     }
   }, [user]);
@@ -241,7 +292,7 @@ const SettingsScreen = ({
         .eq('id', user.id)
         .single();
 
-      if (error) {
+      if (error && error.code !== 'PGRST116') {
         console.error('Error fetching profile:', error);
         return;
       }
@@ -249,6 +300,7 @@ const SettingsScreen = ({
       if (profile) {
         console.log('Profile loaded:', profile);
         
+        // Set avatar if available
         if (profile.avatar_url) {
           console.log('Setting avatar:', profile.avatar_url);
           setAvatar(profile.avatar_url);
@@ -257,11 +309,34 @@ const SettingsScreen = ({
           setAvatar(null);
         }
         
-        if (profile.display_name) {
+        // Only set display name if we don't already have one from user metadata
+        // and if the profile has a display_name
+        if (profile.display_name && !user.user_metadata?.username) {
           setDisplayName(profile.display_name);
+          setOriginalDisplayName(profile.display_name);
         }
       } else {
         console.log('No profile found for user');
+        // Create a basic profile record if none exists
+        try {
+          const { error: insertError } = await supabase
+            .from('user_profiles')
+            .insert({
+              id: user.id,
+              display_name: user.user_metadata?.username || user.email?.split('@')[0] || 'User',
+              email: user.email,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+          
+          if (insertError) {
+            console.error('Error creating profile:', insertError);
+          } else {
+            console.log('Created new user profile');
+          }
+        } catch (insertError) {
+          console.error('Error creating profile:', insertError);
+        }
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -287,11 +362,13 @@ const SettingsScreen = ({
         return;
       }
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      setAvatarLoading(true);
 
       try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+        const filePath = `avatars/${fileName}`;
+
         console.log('Starting avatar upload...');
         
         // First, try to create the storage bucket if it doesn't exist
@@ -337,25 +414,25 @@ const SettingsScreen = ({
 
         console.log('Avatar uploaded successfully:', data.publicUrl);
 
-        // Ensure avatar_url column exists in user_profiles
+        // Update user profile with avatar_url
         try {
-          // Try to update user profile with avatar_url
           const { error: updateError } = await supabase
             .from('user_profiles')
-            .update({ avatar_url: data.publicUrl })
-            .eq('id', user.id);
+            .upsert({ 
+              id: user.id, 
+              avatar_url: data.publicUrl,
+              updated_at: new Date().toISOString()
+            });
 
           if (updateError) {
             console.error('Profile update error:', updateError);
-            // If avatar_url column doesn't exist, try adding it
-            if (updateError.message.includes('column') && updateError.message.includes('avatar_url')) {
-              console.log('Adding avatar_url column to user_profiles...');
-              // Note: This would need to be done via SQL migration
-              // For now, we'll just set the local state
-            }
+            throw new Error('Failed to update profile with avatar URL');
           }
+          
+          console.log('Profile updated with avatar URL');
         } catch (profileError) {
           console.error('Profile update failed:', profileError);
+          throw profileError;
         }
 
         // Set avatar in local state
@@ -363,6 +440,7 @@ const SettingsScreen = ({
         
         // Show success message
         console.log('Avatar updated successfully!');
+        alert('Profile picture updated successfully!');
         
       } catch (error) {
         console.error('Error uploading avatar:', error);
@@ -380,7 +458,39 @@ const SettingsScreen = ({
         
         // Fallback to local preview (temporary)
         setAvatar(URL.createObjectURL(file));
+      } finally {
+        setAvatarLoading(false);
       }
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!avatar) return;
+    
+    try {
+      setAvatarLoading(true);
+      
+      // Remove avatar from user profile
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ 
+          avatar_url: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Error removing avatar:', error);
+        throw error;
+      }
+
+      setAvatar(null);
+      alert('Profile picture removed successfully!');
+    } catch (error) {
+      console.error('Error removing avatar:', error);
+      alert('Failed to remove profile picture. Please try again.');
+    } finally {
+      setAvatarLoading(false);
     }
   };
 
@@ -403,6 +513,13 @@ const SettingsScreen = ({
           timeoutPromise
         ]);
         console.log('Sign out result:', result);
+        
+        // Perform comprehensive cleanup
+        await performAuthCleanup();
+        
+        console.log('Sign out successful, navigating to home...');
+        alert('Sign out successful! Redirecting...');
+        navigate('/');
       } else {
         console.log('useAuth signOut not available, trying direct Supabase...');
         // Fallback to direct Supabase signOut with timeout
@@ -411,26 +528,36 @@ const SettingsScreen = ({
           timeoutPromise
         ]);
         if (error) throw error;
+        
+        // Perform comprehensive cleanup
+        await performAuthCleanup();
+        
+        console.log('Sign out successful, navigating to home...');
+        alert('Sign out successful! Redirecting...');
+        navigate('/');
       }
-      
-      console.log('Sign out successful, navigating to home...');
-      alert('Sign out successful! Redirecting...');
-      navigate('/');
     } catch (error) {
       console.error('❌ Error signing out:', error);
       
-      // If it's a timeout, force local sign out
+      // If it's a timeout, force comprehensive cleanup
       if (error.message.includes('timeout')) {
-        console.log('Network timeout detected, forcing local sign out...');
-        alert('Network timeout - signing out locally and redirecting...');
-        // Clear local storage and redirect anyway
-        localStorage.removeItem('supabase.auth.token');
-        sessionStorage.clear();
-        navigate('/');
+        console.log('Network timeout detected, forcing comprehensive cleanup...');
+        alert('Network timeout - performing comprehensive cleanup and redirecting...');
+        
+        // Use emergency cleanup for timeout scenarios
+        emergencyCleanup();
         return;
       }
       
-      alert(`Failed to sign out: ${error.message}`);
+      // For any other error, try comprehensive cleanup
+      console.log('Sign out failed, attempting comprehensive cleanup...');
+      try {
+        await performAuthCleanup();
+        forcePageReload();
+      } catch (cleanupError) {
+        console.error('Cleanup failed, using emergency cleanup:', cleanupError);
+        emergencyCleanup();
+      }
     }
   };
 
@@ -454,13 +581,28 @@ const SettingsScreen = ({
               <SettingRow>
                 <Label>Profile Picture</Label>
                 <AvatarUpload>
-                  {avatar ? (
-                    <AvatarImg src={avatar} alt="Avatar" />
-                  ) : (
-                    <AvatarPlaceholder>🦋</AvatarPlaceholder>
-                  )}
-                  <Button type="button" onClick={() => fileInputRef.current.click()}>
-                    Change
+                  <div style={{ position: 'relative' }}>
+                    {avatar ? (
+                      <AvatarImg src={avatar} alt="Avatar" />
+                    ) : (
+                      <AvatarPlaceholder>🦋</AvatarPlaceholder>
+                    )}
+                    {avatarLoading && (
+                      <AvatarLoadingOverlay>
+                        ⏳
+                      </AvatarLoadingOverlay>
+                    )}
+                  </div>
+                  <Button 
+                    type="button" 
+                    onClick={() => fileInputRef.current.click()}
+                    disabled={avatarLoading}
+                    style={{
+                      opacity: avatarLoading ? 0.6 : 1,
+                      cursor: avatarLoading ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {avatarLoading ? 'Uploading...' : 'Change'}
                   </Button>
                   <input
                     type="file"
@@ -472,12 +614,69 @@ const SettingsScreen = ({
                 </AvatarUpload>
               </SettingRow>
               <SettingRow>
-                <Label htmlFor="displayName">Display Name</Label>
-                <Input
-                  id="displayName"
-                  value={displayName}
-                  onChange={e => setDisplayName(e.target.value)}
-                />
+                <Label htmlFor="displayName">
+                  Display Name
+                </Label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <Input
+                    id="displayName"
+                    value={displayName}
+                    onChange={e => setDisplayName(e.target.value)}
+                    placeholder="Enter your display name"
+                    style={{
+                      borderColor: displayName !== originalDisplayName 
+                        ? 'rgba(255, 215, 0, 0.5)' 
+                        : undefined,
+                      boxShadow: displayName !== originalDisplayName 
+                        ? '0 0 8px rgba(255, 215, 0, 0.2)' 
+                        : undefined
+                    }}
+                  />
+                  <Button 
+                    type="button" 
+                    onClick={async () => {
+                      try {
+                        const { error } = await supabase
+                          .from('user_profiles')
+                          .upsert({ 
+                            id: user.id, 
+                            display_name: displayName,
+                            updated_at: new Date().toISOString()
+                          });
+                        
+                        if (error) throw error;
+                        
+                        // Update user metadata
+                        const { error: metadataError } = await supabase.auth.updateUser({
+                          data: { username: displayName }
+                        });
+                        
+                        if (metadataError) throw metadataError;
+                        
+                        setOriginalDisplayName(displayName);
+                        alert('Display name updated successfully!');
+                      } catch (error) {
+                        console.error('Error updating display name:', error);
+                        alert('Failed to update display name. Please try again.');
+                      }
+                    }}
+                    style={{ 
+                      padding: '8px 16px', 
+                      fontSize: '0.9rem',
+                      background: displayName !== originalDisplayName 
+                        ? 'rgba(255, 215, 0, 0.3)' 
+                        : 'rgba(255, 215, 0, 0.2)',
+                      border: displayName !== originalDisplayName 
+                        ? '1px solid rgba(255, 215, 0, 0.5)' 
+                        : '1px solid rgba(255, 215, 0, 0.3)',
+                      color: displayName !== originalDisplayName ? '#000' : '#fff',
+                      fontWeight: displayName !== originalDisplayName ? 'bold' : 'normal'
+                    }}
+                    disabled={displayName === originalDisplayName}
+                  >
+                    {displayName !== originalDisplayName ? 'Save Changes' : 'Save'}
+                  </Button>
+                </div>
               </SettingRow>
               <SettingRow>
                 <Label>Email</Label>
@@ -498,8 +697,28 @@ const SettingsScreen = ({
               <SettingRow>
                 <Label>Connected Accounts</Label>
                 <SocialAccounts>
-                  <SocialIcon src="/google-icon.svg" alt="Google" title="Google" />
-                  <SocialIcon src="/apple-icon.svg" alt="Apple" title="Apple" />
+                  <SocialIcon title="Google">
+                    <SocialIconImg 
+                      src="/google-icon.svg" 
+                      alt="Google" 
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    <span style={{ display: 'none' }}>G</span>
+                  </SocialIcon>
+                  <SocialIcon title="Apple">
+                    <SocialIconImg 
+                      src="/apple-icon.svg" 
+                      alt="Apple" 
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    <span style={{ display: 'none' }}>🍎</span>
+                  </SocialIcon>
                 </SocialAccounts>
               </SettingRow>
               {user ? (

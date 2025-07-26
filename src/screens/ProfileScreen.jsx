@@ -70,6 +70,29 @@ const ProfileName = styled.div`
   font-size: 1.3rem;
   font-weight: 700;
   margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.accent.gold};
+    background: rgba(255, 215, 0, 0.1);
+  }
+`;
+
+const EditIcon = styled.span`
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.accent.gold};
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  
+  ${ProfileName}:hover & {
+    opacity: 1;
+  }
 `;
 
 

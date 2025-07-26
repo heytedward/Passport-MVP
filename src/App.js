@@ -59,6 +59,7 @@ const pageTransition = {
 
 function App() {
   const location = useLocation();
+  const { user } = useAuth();
   const [themeMode, setThemeMode] = useState(() => {
     const savedTheme = localStorage.getItem('themeMode');
     return savedTheme || 'dark';
@@ -81,24 +82,32 @@ function App() {
         <AppContainer>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
+              {/* Public routes */}
               <Route path="/join/:referralCode" element={<LoginScreen />} />
-              <Route path="/*" element={<HomeScreen />} />
-              <Route path="/passport" element={<PassportScreen />} />
-              <Route path="/season-roadmap" element={<SeasonRoadmapScreen />} />
-              <Route path="/scan" element={<ScanScreen />} />
-              <Route path="/closet" element={<ClosetScreen />} />
-              <Route path="/profile" element={<ProfileScreen />} />
-              <Route path="/settings" element={<SettingsScreen themeMode={themeMode} onToggleTheme={toggleTheme} />} />
-              <Route path="/quests" element={<QuestsScreen />} />
               <Route path="/login" element={<LoginScreen />} />
-              <Route path="/generate-qr" element={<CircularQRGenerator />} />
+              <Route path="/welcome" element={<WelcomeScreen />} />
+              
+              {/* Protected routes - require authentication */}
               <Route element={<ProtectedRoute />}>
+                <Route path="/" element={<HomeScreen />} />
+                <Route path="/passport" element={<PassportScreen />} />
+                <Route path="/season-roadmap" element={<SeasonRoadmapScreen />} />
+                <Route path="/scan" element={<ScanScreen />} />
+                <Route path="/closet" element={<ClosetScreen />} />
+                <Route path="/profile" element={<ProfileScreen />} />
+                <Route path="/settings" element={<SettingsScreen themeMode={themeMode} onToggleTheme={toggleTheme} />} />
+                <Route path="/quests" element={<QuestsScreen />} />
+                <Route path="/generate-qr" element={<CircularQRGenerator />} />
                 <Route path="/admin" element={<AdminDashboard />} />
               </Route>
+              
+              {/* Catch all route - redirect to login */}
+              <Route path="*" element={<LoginScreen />} />
             </Routes>
           </AnimatePresence>
           
-          <NavBar />
+          {/* Only show NavBar for authenticated users */}
+          {user && <NavBar />}
         </AppContainer>
       </ThemeProvider>
     </AuthProvider>

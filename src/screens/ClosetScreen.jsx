@@ -5,6 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import GlassCard from '../components/GlassCard';
 import { useThemes } from '../hooks/useThemes';
 import { gradientThemes } from '../styles/theme';
+import LimitedEditionBadge from '../components/LimitedEditionBadge';
+import MintNumberDisplay from '../components/MintNumberDisplay';
+import ExclusivityIndicator from '../components/ExclusivityIndicator';
+import { useMonarchRewards } from '../hooks/useMonarchRewards';
 
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
@@ -365,16 +369,27 @@ const FilterTab = styled.button`
 
 const ItemsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
   margin-bottom: 2rem;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  
+  @media (max-width: 480px) {
+    grid-template-columns: repeat(1, 1fr);
+    gap: 8px;
+  }
 `;
 
 const ItemCard = styled(GlassCard)`
   padding: 1.5rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 3px solid ${({ rarity, theme }) => {
+  border: 3px solid ${({ rarity, theme, isLimitedEdition }) => {
+    if (isLimitedEdition) return '#FFB000';
     switch(rarity) {
       case 'legendary': return theme.colors.accent.gold;
       case 'epic': return '#9B4BFF';
@@ -383,7 +398,8 @@ const ItemCard = styled(GlassCard)`
     }
   }};
   box-shadow: 
-    0 0 12px 0 ${({ rarity }) => {
+    0 0 12px 0 ${({ rarity, isLimitedEdition }) => {
+      if (isLimitedEdition) return 'rgba(255,176,0,0.2)';
       switch(rarity) {
         case 'legendary': return 'rgba(255,215,0,0.15)';
         case 'epic': return 'rgba(155,75,255,0.15)';
@@ -391,7 +407,8 @@ const ItemCard = styled(GlassCard)`
         default: return 'rgba(76,28,140,0.15)';
       }
     }},
-    0 0 24px 0 ${({ rarity }) => {
+    0 0 24px 0 ${({ rarity, isLimitedEdition }) => {
+      if (isLimitedEdition) return 'rgba(255,176,0,0.1)';
       switch(rarity) {
         case 'legendary': return 'rgba(255,215,0,0.08)';
         case 'epic': return 'rgba(155,75,255,0.08)';
@@ -438,19 +455,106 @@ const ItemCard = styled(GlassCard)`
   }
 `;
 
-const ItemImage = styled.div`
+const CardIcon = styled.div`
   width: 100%;
-  aspect-ratio: 1;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  margin-bottom: 1rem;
+  height: 60%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 3rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  overflow: hidden;
+  margin-bottom: 0.5rem;
   position: relative;
+  
+  @media (max-width: 768px) {
+    font-size: 2.5rem;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 2rem;
+  }
+`;
+
+const CardContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+  justify-content: space-between;
+`;
+
+const CardName = styled.div`
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+  word-wrap: break-word;
+  
+  @media (max-width: 768px) {
+    font-size: 0.8rem;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.75rem;
+  }
+`;
+
+const CardRarity = styled.div`
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: ${({ rarity, theme }) => {
+    switch(rarity) {
+      case 'legendary': return theme.colors.accent.gold;
+      case 'epic': return '#9B4BFF';
+      case 'rare': return '#4B9CD3';
+      default: return theme.colors.text.secondary;
+    }
+  }};
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
+  
+  @media (max-width: 768px) {
+    font-size: 0.6rem;
+  }
+`;
+
+const MintNumberBadge = styled.div`
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  
+  @media (max-width: 768px) {
+    font-size: 0.6rem;
+    padding: 1px 4px;
+  }
+`;
+
+const LimitedEditionIndicator = styled.div`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #FFB000;
+  color: black;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  
+  @media (max-width: 768px) {
+    font-size: 0.5rem;
+    padding: 1px 4px;
+  }
 `;
 
 // New styled component for MP4 preview
@@ -508,7 +612,54 @@ const Stats = styled.div`
   justify-content: center;
   margin-bottom: 2rem;
   color: ${({ theme }) => theme.colors.text.secondary};
-  font-size: 0.9rem;
+`;
+
+const LimitedEditionStats = styled.div`
+  background: linear-gradient(135deg, rgba(255, 176, 0, 0.1) 0%, rgba(255, 159, 28, 0.1) 100%);
+  border: 1px solid rgba(255, 176, 0, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
+
+  h3 {
+    color: ${({ theme }) => theme.colors.accent.gold};
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .stat-item {
+    text-align: center;
+    
+    .label {
+      font-size: 0.8rem;
+      color: ${({ theme }) => theme.colors.text.secondary};
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: ${({ theme }) => theme.colors.text.primary};
+    }
+  }
+
+  .exclusivity-breakdown {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
 `;
 
 // Modal Styles (copied exactly from PassportScreen)
@@ -849,7 +1000,8 @@ const ItemModal = ({ item, isOpen, onClose }) => {
 
 const ClosetScreen = () => {
   const { ownedThemes, equippedTheme, equipTheme, checkThemeOwnership, getThemeRequirements, userProgress } = useThemes();
-  const [mainFilter, setMainFilter] = useState('all'); // 'all', 'physical', 'digital'
+  const { getRewardById, getLimitedEditionRewards } = useMonarchRewards();
+  const [mainFilter, setMainFilter] = useState('all'); // 'all', 'physical', 'digital', 'limited'
   const [subFilter, setSubFilter] = useState('all');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -973,17 +1125,47 @@ const ClosetScreen = () => {
   // Combine regular items with theme items
   const allItems = [...items, ...getThemeItems()];
 
+  // Enhance items with limited edition information
+  const enhancedItems = allItems.map(item => {
+    const staticReward = getRewardById(item.reward_id || item.item_id);
+    const isLimitedEdition = staticReward?.limitedEdition;
+    
+    return {
+      ...item,
+      isLimitedEdition,
+      limitedEditionConfig: staticReward?.limitedEdition,
+      exclusivityLevel: staticReward?.limitedEdition?.exclusivityLevel || 'limited',
+      totalSupply: staticReward?.limitedEdition?.totalSupply,
+      staticReward
+    };
+  });
+
   // Filter items based on selected filters
-  const filteredItems = allItems.filter(item => {
-    // Main filter (Physical/Digital)
+  const filteredItems = enhancedItems.filter(item => {
+    // Main filter (Physical/Digital/Limited)
     if (mainFilter === 'physical' && item.item_type !== 'physical_item') return false;
     if (mainFilter === 'digital' && item.item_type !== 'digital_collectible') return false;
+    if (mainFilter === 'limited' && !item.isLimitedEdition) return false;
 
     // Sub filter (category)
     if (subFilter !== 'all' && item.category !== subFilter) return false;
 
     return true;
   });
+
+  // Calculate limited edition statistics
+  const limitedEditionItems = enhancedItems.filter(item => item.isLimitedEdition);
+  const limitedEditionStats = {
+    total: limitedEditionItems.length,
+    byExclusivity: limitedEditionItems.reduce((acc, item) => {
+      const level = item.exclusivityLevel;
+      acc[level] = (acc[level] || 0) + 1;
+      return acc;
+    }, {}),
+    totalSupply: limitedEditionItems.reduce((sum, item) => sum + (item.totalSupply || 0), 0),
+    averageRarity: limitedEditionItems.length > 0 ? 
+      limitedEditionItems.reduce((sum, item) => sum + (item.totalSupply || 0), 0) / limitedEditionItems.length : 0
+  };
 
   // Get unique categories for sub-filters
   const getSubFilterOptions = () => {
@@ -1003,6 +1185,7 @@ const ClosetScreen = () => {
     total: allItems.length,
     physical: allItems.filter(item => item.item_type === 'physical_item').length,
     digital: allItems.filter(item => item.item_type === 'digital_collectible').length,
+    limited: limitedEditionItems.length,
     legendary: allItems.filter(item => item.rarity === 'legendary').length,
     epic: allItems.filter(item => item.rarity === 'epic').length,
   };
@@ -1024,9 +1207,41 @@ const ClosetScreen = () => {
         <div>Total: {stats.total}</div>
         <div>Physical: {stats.physical}</div>
         <div>Digital: {stats.digital}</div>
+        <div>Limited: {stats.limited}</div>
         <div>Legendary: {stats.legendary}</div>
         <div>Epic: {stats.epic}</div>
       </Stats>
+
+      {/* Limited Edition Collection Stats */}
+      {limitedEditionStats.total > 0 && (
+        <LimitedEditionStats>
+          <h3>Limited Edition Collection</h3>
+          <div className="stats-grid">
+            <div className="stat-item">
+              <div className="label">Total Limited Items</div>
+              <div className="value">{limitedEditionStats.total}</div>
+            </div>
+            <div className="stat-item">
+              <div className="label">Total Supply</div>
+              <div className="value">{limitedEditionStats.totalSupply.toLocaleString()}</div>
+            </div>
+            <div className="stat-item">
+              <div className="label">Avg. Rarity</div>
+              <div className="value">{Math.round(limitedEditionStats.averageRarity)}</div>
+            </div>
+          </div>
+          <div className="exclusivity-breakdown">
+            {Object.entries(limitedEditionStats.byExclusivity).map(([level, count]) => (
+              <LimitedEditionBadge
+                key={level}
+                exclusivityLevel={level}
+                size="small"
+                showIcon={false}
+              />
+            ))}
+          </div>
+        </LimitedEditionStats>
+      )}
 
       <MainFilterTabs>
         <FilterTab 
@@ -1059,6 +1274,16 @@ const ClosetScreen = () => {
         >
           Digital
         </FilterTab>
+        <FilterTab 
+          type="main"
+          active={mainFilter === 'limited'} 
+          onClick={() => {
+            setMainFilter('limited');
+            setSubFilter('all');
+          }}
+        >
+          Limited Edition
+        </FilterTab>
       </MainFilterTabs>
 
       <SubFilterTabs>
@@ -1087,6 +1312,7 @@ const ClosetScreen = () => {
             <ItemCard 
               key={item.id}
               rarity={item.rarity}
+              isLimitedEdition={item.isLimitedEdition}
               onClick={() => setSelectedItem(item)}
               style={item.category === 'themes' ? {
                 background: item.gradient,
@@ -1094,58 +1320,93 @@ const ClosetScreen = () => {
                 opacity: item.unlocked ? 1 : 0.6
               } : {}}
             >
-              <ItemImage>
-                {item.preview_mp4 && item.file_type === '3d_model' ? (
-                  <VideoPreview
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    src={item.preview_mp4}
-                  />
-                ) : (
-                  <div style={{ 
-                    fontSize: item.category === 'themes' ? '3rem' : '3rem',
-                    position: 'relative' 
-                  }}>
-                    {getItemIcon(item.category, item.item_type, item)}
-                    {item.category === 'themes' && !item.unlocked && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        fontSize: '1.5rem',
-                        color: '#fff',
-                        textShadow: '0 0 4px rgba(0,0,0,0.8)'
-                      }}>
-                        🔒
-                      </div>
-                    )}
-                    {item.category === 'themes' && item.equipped && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '-10px',
-                        right: '-10px',
-                        fontSize: '1rem',
-                        color: '#FFD700'
-                      }}>
-                        ✓
-                      </div>
-                    )}
-                  </div>
-                )}
-              </ItemImage>
-              <ItemName>{item.name}</ItemName>
-              <ItemDetails>
-                <RarityBadge rarity={item.rarity}>{item.rarity}</RarityBadge>
-                {item.mint_number && <span>#{item.mint_number}</span>}
-                {item.category === 'themes' && item.equipped && <span style={{ color: '#FFD700' }}>✓ Equipped</span>}
-                {item.category === 'themes' && !item.unlocked && <span style={{ color: '#ff6b6b' }}>🔒 Locked</span>}
-              </ItemDetails>
-              <ItemCategory>
-                {item.item_type === 'physical_item' ? '👕 Physical' : '💎 Digital'} • {getCategoryDisplayName(item.category)}
-              </ItemCategory>
+              {/* Limited Edition Indicator */}
+              {item.isLimitedEdition && (
+                <LimitedEditionIndicator>
+                  Limited
+                </LimitedEditionIndicator>
+              )}
+              
+              {/* Mint Number Badge */}
+              {item.mint_number && (
+                <MintNumberBadge>
+                  #{item.mint_number}
+                </MintNumberBadge>
+              )}
+              
+              <CardContent>
+                <CardIcon>
+                  {item.preview_mp4 && item.file_type === '3d_model' ? (
+                    <VideoPreview
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      src={item.preview_mp4}
+                    />
+                  ) : (
+                    <div style={{ 
+                      fontSize: item.category === 'themes' ? '3rem' : '3rem',
+                      position: 'relative' 
+                    }}>
+                      {getItemIcon(item.category, item.item_type, item)}
+                      {item.category === 'themes' && !item.unlocked && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          fontSize: '1.5rem',
+                          color: '#fff',
+                          textShadow: '0 0 4px rgba(0,0,0,0.8)'
+                        }}>
+                          🔒
+                        </div>
+                      )}
+                      {item.category === 'themes' && item.equipped && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '-10px',
+                          right: '-10px',
+                          fontSize: '1rem',
+                          color: '#FFD700'
+                        }}>
+                          ✓
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardIcon>
+                
+                <div>
+                  <CardName>{item.name}</CardName>
+                  <CardRarity rarity={item.rarity}>{item.rarity}</CardRarity>
+                  
+                  {/* Theme-specific indicators */}
+                  {item.category === 'themes' && item.equipped && (
+                    <div style={{ 
+                      color: '#FFD700', 
+                      fontSize: '0.6rem', 
+                      fontWeight: '600',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}>
+                      ✓ Equipped
+                    </div>
+                  )}
+                  {item.category === 'themes' && !item.unlocked && (
+                    <div style={{ 
+                      color: '#ff6b6b', 
+                      fontSize: '0.6rem', 
+                      fontWeight: '600',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}>
+                      🔒 Locked
+                    </div>
+                  )}
+                </div>
+              </CardContent>
             </ItemCard>
           ))}
         </ItemsGrid>

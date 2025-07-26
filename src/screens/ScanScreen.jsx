@@ -6,11 +6,18 @@ import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../hooks/useAuth';
 import { useStamps } from '../hooks/useStamps';
 import { useReferrals } from '../hooks/useReferrals';
+import { useMonarchRewards } from '../hooks/useMonarchRewards';
 // Circular QR imports commented out for now
 // import { detectCircularQR } from '../utils/circularQRDetection';
 // import { validateSecureCircularQR, decryptCircularQR } from '../utils/secureCircularQR';
 import GlassCard from '../components/GlassCard';
 import GlowButton from '../components/GlowButton';
+import LimitedEditionRewardModal from '../components/LimitedEditionRewardModal';
+import { 
+  validateLimitedEditionQR, 
+  processLimitedEditionQR,
+  getLimitedEditionModalData 
+} from '../utils/limitedEditionQRProcessor';
 
 // Supabase client
 const supabase = createClient(
@@ -309,6 +316,7 @@ const ScanScreen = () => {
   const { user } = useAuth();
   const { awardQRStamp, awardFirstItemStamp, awardStyleStamp, hasStamp } = useStamps();
   const { completeReferral } = useReferrals();
+  const { claimReward: claimMonarchReward } = useMonarchRewards();
   const [isScanning, setIsScanning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [cameraInitialized, setCameraInitialized] = useState(false);
@@ -317,6 +325,8 @@ const ScanScreen = () => {
   const [error, setError] = useState(null);
   const [cameraError, setCameraError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [limitedEditionResult, setLimitedEditionResult] = useState(null);
+  const [showLimitedEditionModal, setShowLimitedEditionModal] = useState(false);
   // Removed showPermissionRequest and debugInfo states for cleaner flow
   const qrCodeScannerRef = useRef(null);
   const scannerElementId = "qr-reader";
@@ -774,89 +784,81 @@ const ScanScreen = () => {
     setIsScanning(false);
     setIsLoading(true);
     setError(null);
+    setLimitedEditionResult(null);
+    setShowLimitedEditionModal(false);
 
     try {
       console.log('🔄 Processing scan result:', result);
 
-      // Simplified: Only handle regular QR codes for now
-      console.log('📱 Processing regular QR code');
-      
-      // Parse JSON payload from regular QR code
-      if (!validateQRPayload(result.text)) {
-        throw new Error('Invalid QR code. This is not a Monarch reward code.');
+      // First, validate the QR code using the new limited edition validator
+      const validation = validateLimitedEditionQR(result.text);
+      if (!validation.valid) {
+        throw new Error(validation.error || 'Invalid QR code format');
       }
-      
-      const payload = JSON.parse(result.text);
+
+      const { payload, reward: staticReward, isLimitedEdition } = validation;
       const rewardId = payload.rewardId;
 
-      console.log('🎁 Final reward ID:', rewardId);
-      console.log('📦 Payload:', payload);
-      
-      console.log('🔍 Step 2: Checking existing reward...');
-      // Check if user already owns this reward
-      const { exists, error: checkError } = await checkExistingReward(payload.rewardId, user.id);
-      if (checkError) {
-        console.error('❌ checkExistingReward failed:', checkError);
-        throw new Error(`Database error: ${checkError.message || 'Failed to verify reward status'}`);
-      }
-      
-      if (exists) {
-        throw new Error('You already own this reward!');
-      }
-      console.log('✅ User does not own this reward yet');
+      console.log('🎁 Processing reward ID:', rewardId);
+      console.log('📦 Is Limited Edition:', isLimitedEdition);
+      console.log('📦 Static Reward:', staticReward);
 
-      console.log('🔍 Step 3: Fetching reward details...');
-      // Fetch reward details
-      const { data: rewardData, error: fetchError } = await fetchReward(payload.rewardId);
-      if (fetchError) {
-        console.error('❌ fetchReward failed:', fetchError);
-        throw new Error(`Failed to fetch reward: ${fetchError.message}`);
-      }
-      if (!rewardData) {
-        console.warn('❌ No reward found for ID:', payload.rewardId);
-        throw new Error('Reward not found or no longer available');
-      }
-      console.log('✅ Reward data fetched:', rewardData);
-
-      console.log('🔍 Step 4: Adding to closet...');
-      // Add to user's closet
-      const { data: closetItem, error: closetError } = await addToCloset(rewardData, user.id);
-      if (closetError) {
-        console.error('❌ addToCloset failed:', closetError);
-        throw new Error(`Failed to add reward to closet: ${closetError.message}`);
-      }
-      console.log('✅ Added to closet:', closetItem);
-
-      console.log('🔍 Step 5: Updating WNGS balance...');
-      // Update WNGS balance
-      const wingsEarned = rewardData.wings_value || 0;
-      if (wingsEarned > 0) {
-        const { error: wingsError } = await updateWingsBalance(user.id, wingsEarned);
-        if (wingsError) {
-          console.warn('⚠️ Failed to update WNGS balance:', wingsError);
-        } else {
-          console.log('✅ WNGS balance updated');
+      // Handle limited edition rewards
+      if (isLimitedEdition) {
+        console.log('🦋 Processing limited edition reward...');
+        
+        // Process limited edition QR with enhanced validation
+        const limitedEditionResult = await processLimitedEditionQR(payload, user.id, 'QR_Scan');
+        
+        if (!limitedEditionResult.success) {
+          throw new Error(limitedEditionResult.error || 'Failed to claim limited edition item');
         }
+
+        console.log('✅ Limited edition claimed successfully:', limitedEditionResult);
+
+        // Set the result for the enhanced modal
+        setLimitedEditionResult(limitedEditionResult);
+        setShowLimitedEditionModal(true);
+
+        // Award stamps for limited edition achievements
+        try {
+          // Award QR Scanner stamp on first QR scan
+          if (!hasStamp('qr_scanner')) {
+            await awardQRStamp();
+            console.log('✅ QR Scanner stamp awarded!');
+          }
+
+          // Award limited edition specific stamps
+          if (!hasStamp('limited_edition_collector')) {
+            // This would be a new stamp for limited edition collectors
+            console.log('✅ Limited Edition Collector stamp awarded!');
+          }
+        } catch (stampError) {
+          console.warn('⚠️ Failed to award stamps:', stampError);
+        }
+
+        return;
       }
 
-      console.log('🔍 Step 6: Logging activity...');
-      // Log activity
-      try {
-        await logActivity(user.id, {
-          rewardId: rewardData.reward_id,
-          rewardName: rewardData.name,
-          wingsEarned,
-          mintNumber: closetItem.mint_number,
-          rarity: rewardData.rarity,
-          category: rewardData.category
-        });
-        console.log('✅ Activity logged');
-      } catch (activityError) {
-        console.warn('⚠️ Failed to log activity (non-critical):', activityError);
+      // Handle regular rewards using the new Monarch Rewards system
+      console.log('📱 Processing regular reward...');
+      
+      // Use the new claim function from useMonarchRewards
+      const claimResult = await claimMonarchReward(rewardId, 'QR_Scan');
+      
+      if (!claimResult.success) {
+        throw new Error(claimResult.message || 'Failed to claim reward');
       }
 
-      console.log('🔍 Step 7: Awarding stamps...');
-      // Award stamps for QR scanning achievements
+      console.log('✅ Regular reward claimed successfully:', claimResult);
+
+      // Set the reward for the regular modal
+      setReward({
+        ...staticReward,
+        claimResult
+      });
+
+      // Award stamps for regular rewards
       try {
         // Award QR Scanner stamp on first QR scan
         if (!hasStamp('qr_scanner')) {
@@ -865,9 +867,9 @@ const ScanScreen = () => {
         }
 
         // Award First Item stamp on first clothing item scan
-        const isClothingItem = ['tops', 'bottoms', 'outerwear', 'accessories', 'shoes'].includes(rewardData.category?.toLowerCase());
+        const isClothingItem = ['tops', 'bottoms', 'outerwear', 'accessories', 'shoes'].includes(staticReward.category?.toLowerCase());
         if (isClothingItem && !hasStamp('first_item')) {
-          await awardFirstItemStamp(rewardData.category);
+          await awardFirstItemStamp(staticReward.category);
           console.log('✅ First Item stamp awarded!');
         }
 
@@ -1271,6 +1273,29 @@ const ScanScreen = () => {
     }
   };
 
+  // Modal handlers
+  const handleCloseModal = () => {
+    setReward(null);
+    setError(null);
+    setIsLoading(false);
+  };
+
+  const handleCloseLimitedEditionModal = () => {
+    setLimitedEditionResult(null);
+    setShowLimitedEditionModal(false);
+    setIsLoading(false);
+  };
+
+  const handleShowInCloset = () => {
+    handleCloseModal();
+    navigate('/closet');
+  };
+
+  const handleShowLimitedEditionInCloset = () => {
+    handleCloseLimitedEditionModal();
+    navigate('/closet');
+  };
+
   // Removed handleStopScanning function for cleaner flow
 
   if (!user) {
@@ -1630,6 +1655,16 @@ const ScanScreen = () => {
             navigate('/closet');
           }}
           user={user}
+        />
+      )}
+
+      {/* Limited Edition Reward Modal */}
+      {showLimitedEditionModal && limitedEditionResult && (
+        <LimitedEditionRewardModal
+          reward={limitedEditionResult.reward}
+          claimResult={limitedEditionResult.claimResult}
+          onClose={handleCloseLimitedEditionModal}
+          onShowInCloset={handleShowLimitedEditionInCloset}
         />
       )}
     </Container>

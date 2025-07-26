@@ -617,6 +617,21 @@ function HomeScreen() {
           onQuestComplete={refreshStats}
         />
       )}
+      
+      {/* Version Indicator */}
+      <div style={{
+        position: 'fixed',
+        bottom: '80px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        fontSize: '0.7rem',
+        color: 'rgba(255, 255, 255, 0.5)',
+        textAlign: 'center',
+        zIndex: 10,
+        pointerEvents: 'none'
+      }}>
+        Beta v0.1.0
+      </div>
     </Container>
   );
 }
