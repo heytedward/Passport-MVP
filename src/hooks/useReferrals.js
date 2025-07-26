@@ -79,6 +79,11 @@ export const useReferrals = () => {
     hasInitializedRef.current = true;
     console.log('🔧 ensureReferralCode: Starting for user:', user.id);
 
+    // Set a timeout to prevent infinite loading
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Referral code generation timeout')), 10000)
+    );
+
     try {
       // Check if Supabase is properly configured
       if (!process.env.REACT_APP_SUPABASE_URL || !process.env.REACT_APP_SUPABASE_ANON_KEY) {
@@ -89,13 +94,16 @@ export const useReferrals = () => {
       }
 
       console.log('🔍 Checking for existing referral code...');
-      // Check if user already has a referral code
-      const { data: existingCode, error: fetchError } = await supabase
+      
+      // Race between the database query and timeout
+      const queryPromise = supabase
         .from('referral_codes')
         .select('referral_code')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .single();
+
+      const { data: existingCode, error: fetchError } = await Promise.race([queryPromise, timeoutPromise]);
 
       console.log('📊 Existing code query result:', { existingCode, fetchError });
 
@@ -122,11 +130,13 @@ export const useReferrals = () => {
         newCode = generateReferralCode(user);
         console.log(`🎲 Attempt ${attempts + 1}: Generated code ${newCode}`);
         
-        const { data: createdCode, error: createError } = await supabase
+        const insertPromise = supabase
           .from('referral_codes')
           .insert([{ user_id: user.id, referral_code: newCode }])
           .select('referral_code')
           .single();
+
+        const { data: createdCode, error: createError } = await Promise.race([insertPromise, timeoutPromise]);
 
         console.log('💾 Insert result:', { createdCode, createError });
 
@@ -155,6 +165,15 @@ export const useReferrals = () => {
     } catch (error) {
       console.error('❌ Error ensuring referral code:', error);
       setError(error.message);
+      
+      // If it's a timeout, try to generate a fallback code
+      if (error.message.includes('timeout')) {
+        console.log('⏰ Timeout occurred, generating fallback code');
+        const fallbackCode = generateReferralCode(user);
+        setReferralCode(fallbackCode);
+        return fallbackCode;
+      }
+      
       return null;
     } finally {
       isProcessingRef.current = false;

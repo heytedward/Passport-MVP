@@ -8,7 +8,7 @@ import GlobalStyle from './styles/GlobalStyle';
 
 import { useAuth, AuthProvider } from './hooks/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
-import BetaGate from './components/BetaGate';
+
 
 import WelcomeScreen from './screens/WelcomeScreen';
 import HomeScreen from './screens/HomeScreen';
@@ -24,7 +24,7 @@ import AdminDashboard from './screens/AdminDashboard';
 import CircularQRGenerator from './components/CircularQRGenerator';
 
 import NavBar from './components/NavBar';
-import FloatingScanButton from './components/FloatingScanButton';
+
 
 const AppContainer = styled.div`
   background-color: ${({ theme }) => theme.colors.background};
@@ -78,8 +78,7 @@ function App() {
     <AuthProvider>
       <ThemeProvider theme={currentTheme}>
         <GlobalStyle />
-        <BetaGate>
-          <AppContainer>
+        <AppContainer>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               <Route path="/join/:referralCode" element={<LoginScreen />} />
@@ -101,7 +100,6 @@ function App() {
           
           <NavBar />
         </AppContainer>
-        </BetaGate>
       </ThemeProvider>
     </AuthProvider>
   );

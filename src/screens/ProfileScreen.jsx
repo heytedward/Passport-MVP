@@ -873,6 +873,13 @@ function ProfileScreen() {
               padding: '1rem'
             }}>
               Generating your code...
+              <div style={{ 
+                fontSize: '0.8rem', 
+                color: '#666',
+                marginTop: '0.5rem'
+              }}>
+                This may take a few seconds...
+              </div>
             </div>
           ) : referralCode ? (
             <>

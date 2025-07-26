@@ -91,17 +91,31 @@ const BetaGate = ({ children }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [hasSeenIntro, setHasSeenIntro] = useState(false);
 
   useEffect(() => {
+    // Check if user has seen the intro screen
+    const introSeen = localStorage.getItem('monarch_intro_seen');
+    if (introSeen === 'true') {
+      setHasSeenIntro(true);
+    }
+    
     // Check if user already has access (stored in localStorage)
     const betaAccess = localStorage.getItem('monarch_beta_access');
     if (betaAccess === 'granted') {
       setHasAccess(true);
-      // If user already has beta access, redirect to login
+    }
+    
+    setIsLoading(false);
+  }, []);
+
+  // Handle navigation when hasAccess changes
+  useEffect(() => {
+    if (hasAccess && hasSeenIntro) {
+      // Navigate to login after successful beta access
       navigate('/login');
     }
-    setIsLoading(false);
-  }, [navigate]);
+  }, [hasAccess, hasSeenIntro, navigate]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -113,8 +127,6 @@ const BetaGate = ({ children }) => {
       localStorage.setItem('monarch_beta_access', 'granted');
       setHasAccess(true);
       setError('');
-      // Redirect to login screen after successful beta access
-      navigate('/login');
     } else {
       setError('Invalid access code. Contact support for access.');
       setPassword('');
@@ -158,14 +170,74 @@ const BetaGate = ({ children }) => {
     );
   }
 
-  if (hasAccess) {
+  const handleIntroTap = () => {
+    localStorage.setItem('monarch_intro_seen', 'true');
+    setHasSeenIntro(true);
+    // Don't navigate here - let the component logic handle the flow
+  };
+
+  // Show intro screen for first-time users
+  if (!hasSeenIntro && !isLoading) {
+    return (
+      <div 
+        style={{
+          minHeight: '100vh',
+          background: '#000000',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 9999,
+          cursor: 'pointer'
+        }}
+        onClick={handleIntroTap}
+      >
+        <div style={{
+          fontFamily: 'Outfit, sans-serif',
+          fontSize: '2.5rem',
+          fontWeight: '700',
+          color: '#FFFFFF',
+          textAlign: 'center',
+          textShadow: '0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,255,255,0.4)',
+          marginBottom: '2rem'
+        }}>
+          Monarch Passport
+        </div>
+        <div style={{
+          fontFamily: 'Outfit, sans-serif',
+          fontSize: '1.2rem',
+          fontWeight: '400',
+          color: '#FFB000',
+          textAlign: 'center',
+          textShadow: '0 0 10px rgba(255,176,0,0.6)',
+          animation: 'pulse 2s ease-in-out infinite'
+        }}>
+          Tap in
+        </div>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // If user has seen intro and has beta access, show the app
+  if (hasSeenIntro && hasAccess) {
     return children;
   }
 
   return (
     <BetaContainer>
       <BetaCard>
-        <BetaTitle>🦋 Monarch Passport</BetaTitle>
+        <BetaTitle>Monarch Passport</BetaTitle>
         <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '2rem' }}>
           Private Beta Access Required
         </p>
