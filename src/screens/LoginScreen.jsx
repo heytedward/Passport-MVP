@@ -272,11 +272,37 @@ const LoginScreen = () => {
 
   if (loading) {
     return (
-      <LoginContainer>
-        <LoginCard>
-          <Title>Loading...</Title>
-        </LoginCard>
-      </LoginContainer>
+      <div style={{
+        minHeight: '100vh',
+        background: '#000000',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999
+      }}>
+        <div style={{
+          fontFamily: 'Outfit, sans-serif',
+          fontSize: '2.5rem',
+          fontWeight: '700',
+          color: '#FFFFFF',
+          textAlign: 'center',
+          textShadow: '0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,255,255,0.4)',
+          animation: 'pulse 2s ease-in-out infinite'
+        }}>
+          Monarch Passport
+        </div>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+          }
+        `}</style>
+      </div>
     );
   }
 

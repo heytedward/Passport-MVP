@@ -176,13 +176,13 @@ const StampsCounter = styled.div`
         return '#7F3FBF';
     }
   }};
-  width: 4.5rem;
-  height: 4.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
   backdrop-filter: blur(10px);
@@ -204,6 +204,14 @@ const StampsCounter = styled.div`
   z-index: 10;
   text-align: center;
   line-height: 1.1;
+  
+  @media (max-width: 767px) {
+    width: 3rem;
+    height: 3rem;
+    font-size: 0.8rem;
+    top: -0.25rem;
+    right: -0.25rem;
+  }
 `;
 
 const SeasonTitle = styled.h2`

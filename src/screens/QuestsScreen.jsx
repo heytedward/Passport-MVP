@@ -385,10 +385,6 @@ const QuestsScreen = () => {
 
   return (
     <Container>
-      <BackButton onClick={() => navigate(-1)}>
-        ← Back
-      </BackButton>
-      
       <QuestJournal>
         <JournalHeader>
           <JournalTitle>Spring '25 Quests</JournalTitle>

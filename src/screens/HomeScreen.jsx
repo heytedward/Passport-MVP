@@ -526,7 +526,7 @@ function HomeScreen() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
               <div style={{ flex: 1 }}>
                 <ProgressText>Passport</ProgressText>
-                <ProgressSub>{stampData.current}/{stampData.total} stamps this season</ProgressSub>
+                <ProgressSub>{stampData.current}/{stampData.total} stamps</ProgressSub>
               </div>
               <div style={{ 
                 display: 'flex',
@@ -535,7 +535,7 @@ function HomeScreen() {
                 marginLeft: '90px'
               }}>
                 <div style={{ 
-                  fontSize: '3rem', 
+                  fontSize: '2.5rem', 
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -544,9 +544,11 @@ function HomeScreen() {
                   background: 'rgba(255, 176, 0, 0.1)',
                   border: '2px solid rgba(255, 176, 0, 0.3)',
                   borderRadius: '12px',
-                  marginBottom: '0.5rem'
+                  marginBottom: '0.5rem',
+                  color: '#FFB000',
+                  fontWeight: '700'
                 }}>
-                  🎫
+                  {stampData.current}/{stampData.total}
                 </div>
                 <div style={{ 
                   fontSize: '0.8rem', 

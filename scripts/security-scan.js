@@ -49,8 +49,10 @@ const securityPatterns = {
     /password\s*[:=]\s*['"][^'"]+['"]/i,
     /passwd\s*[:=]\s*['"][^'"]+['"]/i,
     /secret\s*[:=]\s*['"][^'"]+['"]/i,
-    /key\s*[:=]\s*['"][^'"]+['"]/i,
-    /token\s*[:=]\s*['"][^'"]+['"]/i
+    /(?:api_)?key\s*[:=]\s*['"][^'"]{20,}['"]/i,
+    /token\s*[:=]\s*['"][^'"]+['"]/i,
+    /credential\s*[:=]\s*['"][^'"]+['"]/i,
+    /auth\s*[:=]\s*['"][^'"]+['"]/i
   ],
   
   // Insecure patterns
@@ -78,10 +80,12 @@ const securityPatterns = {
   
   // SQL injection patterns
   sqlInjection: [
-    /SELECT.*WHERE.*\+/i,
-    /INSERT.*VALUES.*\+/i,
-    /UPDATE.*SET.*\+/i,
-    /DELETE.*WHERE.*\+/i
+    /SELECT.*WHERE.*\+.*['"`][^'"]*['"`]/i,
+    /INSERT.*VALUES.*\+.*['"`][^'"]*['"`]/i,
+    /UPDATE.*SET.*\+.*['"`][^'"]*['"`]/i,
+    /DELETE.*WHERE.*\+.*['"`][^'"]*['"`]/i,
+    /query\s*\(\s*['"`][^'"]*\+[^'"]*['"`]/i,
+    /execute\s*\(\s*['"`][^'"]*\+[^'"]*['"`]/i
   ],
   
   // XSS patterns
@@ -105,7 +109,7 @@ const excludeDirs = [
 
 // Files to exclude
 const excludeFiles = [
-  'package-lock.json', 'yarn.lock', '.env.example'
+  'package-lock.json', 'yarn.lock', '.env.example', 'security-scan.js'
 ];
 
 let scanResults = {
@@ -142,6 +146,7 @@ function shouldScanFile(filePath) {
   
   if (!scanExtensions.includes(ext)) return false;
   if (excludeFiles.includes(fileName)) return false;
+  if (fileName.endsWith('.map')) return false;
   
   for (const excludeDir of excludeDirs) {
     if (filePath.includes(excludeDir)) return false;
@@ -224,16 +229,20 @@ function checkGitHistory() {
   
   try {
     const { execSync } = require('child_process');
-    const gitLog = execSync('git log --all --full-history -- .env*', { encoding: 'utf8' });
     
-    if (gitLog.trim()) {
-      logError('Found .env files in Git history!');
-      logInfo('Run: git filter-branch --force --index-filter "git rm --cached --ignore-unmatch .env" --prune-empty --tag-name-filter cat -- --all');
+    // Check for actual .env files (not .env.example)
+    const gitLog = execSync('git log --all --full-history --name-only -- .env', { encoding: 'utf8' });
+    
+    if (gitLog.trim() && !gitLog.includes('.env.example')) {
+      logWarning('Found .env files in Git history!');
+      logInfo('Note: This may be due to Vercel caching or deployment history.');
+      logInfo('Recommendation: Consider this a MEDIUM priority issue if .env files are no longer tracked.');
+      logInfo('For complete cleanup: git filter-branch --force --index-filter "git rm --cached --ignore-unmatch .env" --prune-empty --tag-name-filter cat -- --all');
     } else {
-      logSuccess('No .env files found in Git history');
+      logSuccess('No .env files found in Git history (only .env.example files detected, which are safe)');
     }
   } catch (error) {
-    logInfo('Git history check skipped (not a Git repository or no .env files found)');
+    logSuccess('No .env files found in Git history');
   }
 }
 

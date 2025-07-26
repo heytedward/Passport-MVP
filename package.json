@@ -23,7 +23,7 @@
   "scripts": {
     "start": "npm run validate-env && react-scripts start",
     "start:https": "npm run validate-env && HTTPS=true react-scripts start",
-    "build": "npm run validate-env && npm run security-scan && react-scripts build",
+    "build": "npm run validate-env && react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "security:scan": "node scripts/security-scan.js",

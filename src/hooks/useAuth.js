@@ -38,6 +38,12 @@ export const AuthProvider = ({ children }) => {
       }
     };
 
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.warn('Auth loading timeout - forcing completion');
+      setLoading(false);
+    }, 5000); // 5 second timeout
+
     fetchSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -66,6 +72,7 @@ export const AuthProvider = ({ children }) => {
     );
 
     return () => {
+      clearTimeout(timeoutId);
       authListener.subscription.unsubscribe();
     };
   }, []);

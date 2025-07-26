@@ -1,0 +1,115 @@
+---
+description: Monarch Passport MVP development rules for PapillonLabs
+global: true
+alwaysApply: true
+---
+
+# MONARCH PASSPORT MVP - PROJECT RULES
+
+## PROJECT CONTEXT
+You are working on Monarch Passport MVP, a fashion brand QR-to-earn mobile app built by PapillonLabs.
+
+### TECH STACK
+- Frontend: React 18 with hooks, styled-components
+- Backend: Supabase (auth, database, storage)  
+- Deployment: Vercel
+- Mobile: PWA optimized for mobile-first
+- Security: Enterprise-grade with custom middleware
+
+### CORE FEATURES
+- QR code scanning for fashion rewards
+- Digital closet for collected items
+- Stamp/achievement system  
+- User authentication and profiles
+- Referral system with WINGS currency
+
+## 🔒 SECURITY REQUIREMENTS
+
+### CRITICAL SECURITY RULES
+1. NEVER suggest using service_role keys in frontend code
+2. ALWAYS use REACT_APP_ prefixed environment variables for frontend
+3. NEVER hardcode secrets - always use environment variables
+4. ALWAYS validate user inputs with existing security middleware
+5. USE PapillonLabs nature-themed naming for custom keys (Monarch, Nectar, Wing, etc.)
+
+### SUPABASE SECURITY
+- Only use anon/public keys in React components
+- Always implement Row Level Security (RLS) policies
+- Use existing security middleware in src/utils/securityMiddleware.js
+- Follow existing authentication patterns in useAuth.js
+
+## 📱 CODING STANDARDS
+
+### REACT PATTERNS
+- Use functional components with hooks only
+- Follow existing file structure in src/
+- Use styled-components for styling (follow existing theme)
+- Implement mobile-first responsive design
+- Use existing custom hooks (useAuth, useStamps, useThemes, etc.)
+
+### NAMING CONVENTIONS
+- Components: PascalCase (HomeScreen.jsx)
+- Hooks: camelCase starting with 'use' (useAuth.js)
+- Utils: camelCase (securityMiddleware.js)
+- Styled components: PascalCase (StyledButton)
+- Variables: camelCase
+- Constants: UPPER_SNAKE_CASE
+
+## 🎨 UI/UX GUIDELINES
+
+### DESIGN SYSTEM
+- Use existing theme from src/styles/theme.js
+- Follow glass morphism design patterns
+- Maintain dark theme with gold accents (#FFB000)
+- Use gradients from existing gradient themes
+- Mobile-first approach (320px minimum width)
+
+### COMPONENT PATTERNS
+- Use GlassCard component for containers
+- Use GlowButton for primary actions
+- Implement loading states and error handling
+- Follow existing modal/overlay patterns
+
+## 🌿 PAPILLONLABS BRANDING
+
+### TERMINOLOGY
+- Use nature/butterfly themed naming
+- Reference: Monarch, Chrysalis, Nectar, Wing, Bloom, Pollinate
+- Brand: PapillonLabs (not just Papillon)
+- App: Monarch Passport (not just Passport)
+
+### CONTENT TONE
+- Professional but warm
+- Fashion-forward
+- Emphasize transformation and growth
+- Use butterfly/nature metaphors appropriately
+
+## 📋 SPECIFIC FEATURE GUIDELINES
+
+### QR SCANNING
+- Use existing QR validation in src/utils/inputValidation.js
+- Follow security patterns in ScanScreen.jsx
+- Implement proper error handling for invalid codes
+- Use existing reward processing logic
+
+### AUTHENTICATION
+- Follow useAuth.js patterns
+- Implement proper loading states
+- Handle Supabase auth errors gracefully
+- Use existing user profile management
+
+### DATABASE OPERATIONS
+- Always use user.id for user-specific operations
+- Follow existing RLS policy patterns
+- Use proper error handling for database operations
+- Implement optimistic updates where appropriate
+
+## 🚀 DEPLOYMENT CONSIDERATIONS
+
+### ENVIRONMENT VARIABLES
+- Use REACT_APP_ prefix for frontend variables
+- Follow existing .env.example structure
+- Never commit actual secrets
+- Use PapillonLabs themed custom keys
+
+REMEMBER: This is a fashion brand's premium mobile app. Code quality, security, and user experience are paramount. Always suggest solutions that maintain the professional, secure, and beautiful nature of the Monarch Passport experience.
