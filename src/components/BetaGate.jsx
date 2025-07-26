@@ -103,7 +103,7 @@ const BetaGate = ({ children }) => {
     e.preventDefault();
     
     // Set your beta password here
-    const BETA_PASSWORD = 'papillon2025'; // Change this!
+    const BETA_PASSWORD = process.env.REACT_APP_BETA_PASSWORD || 'papillon2025'; // Use environment variable
     
     if (password === BETA_PASSWORD) {
       localStorage.setItem('monarch_beta_access', 'granted');

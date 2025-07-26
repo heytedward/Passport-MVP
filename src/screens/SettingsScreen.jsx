@@ -209,7 +209,12 @@ const supabase = createClient(
   process.env.REACT_APP_SUPABASE_ANON_KEY
 );
 
-const SettingsScreen = ({ themeMode = 'dark', onToggleTheme = () => {}, gradientKey = 'monarch', onGradientChange = () => {} }) => {
+const SettingsScreen = ({ 
+  themeMode = process.env.REACT_APP_DEFAULT_THEME_MODE || 'dark', 
+  onToggleTheme = () => {}, 
+  gradientKey = process.env.REACT_APP_DEFAULT_GRADIENT || 'monarch', 
+  onGradientChange = () => {} 
+}) => {
   const { user, signOut } = useAuth();
   const { ownedThemes, equippedTheme, equipTheme, checkThemeOwnership } = useThemes();
   const [open, setOpen] = useState('account');

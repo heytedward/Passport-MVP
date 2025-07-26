@@ -21,11 +21,22 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "start:https": "HTTPS=true react-scripts start",
-    "build": "react-scripts build",
+    "start": "npm run validate-env && react-scripts start",
+    "start:https": "npm run validate-env && HTTPS=true react-scripts start",
+    "build": "npm run validate-env && npm run security-scan && react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "security:scan": "node scripts/security-scan.js",
+    "security:monitor": "node scripts/security-monitor.js",
+    "validate-env": "node scripts/validate-env.js",
+    "security:audit": "npm audit && npm run security:scan",
+    "security:full": "npm run validate-env && npm run security:scan && npm run security:monitor",
+    "security:test": "npm run security:audit && npm run security:full",
+    "security:rotate": "node scripts/rotate-secrets.js",
+    "security:backup": "node scripts/backup-secrets.js",
+    "precommit": "npm run validate-env && npm run security:scan",
+    "postinstall": "npm run validate-env",
+    "deploy:secure": "npm run security:test && npm run build"
   },
   "eslintConfig": {
     "extends": [
@@ -43,6 +54,17 @@
       "last 1 chrome version",
       "last 1 firefox version",
       "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "dotenv-safe": "^8.2.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "npm run validate-env",
+      "npm run security:scan"
     ]
   }
 }

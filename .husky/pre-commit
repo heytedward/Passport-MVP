@@ -1,0 +1,26 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔒 Running security checks before commit..."
+
+# Run environment validation
+npm run validate-env
+
+# Run security scan
+npm run security:scan
+
+# Check for .env files in staged changes
+if git diff --cached --name-only | grep -E "\.env$|\.env\."; then
+  echo "🚨 ERROR: Environment files detected in commit!"
+  echo "Please remove .env files from your commit and ensure they are in .gitignore"
+  exit 1
+fi
+
+# Check for potential secrets in staged changes
+if git diff --cached | grep -E "(sk_live_|pk_live_|sk_test_|pk_test_|eyJ[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*)"; then
+  echo "🚨 ERROR: Potential secrets detected in commit!"
+  echo "Please remove any API keys or secrets from your changes"
+  exit 1
+fi
+
+echo "✅ Security checks passed!"

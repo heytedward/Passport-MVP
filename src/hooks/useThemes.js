@@ -122,7 +122,7 @@ export const useThemes = () => {
       });
 
       // Get equipped theme - with better error handling
-      let equippedThemeKey = 'frequencyPulse'; // Default fallback
+      let equippedThemeKey = process.env.REACT_APP_DEFAULT_THEME || 'frequencyPulse'; // Default fallback
       
       try {
         const { data: equippedData, error: equippedError } = await supabase
