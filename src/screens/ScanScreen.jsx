@@ -843,8 +843,16 @@ const ScanScreen = () => {
       // Handle regular rewards using the new Monarch Rewards system
       console.log('📱 Processing regular reward...');
       
-      // Use the new claim function from useMonarchRewards
-      const claimResult = await claimMonarchReward(rewardId, 'QR_Scan');
+      // Use the new claim function from useMonarchRewards with timeout
+      console.log('🔍 Starting claim process...');
+      const claimPromise = claimMonarchReward(rewardId, 'QR_Scan');
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Claim timeout - taking too long')), 12000)
+      );
+      
+      console.log('⏱️ Waiting for claim result...');
+      const claimResult = await Promise.race([claimPromise, timeoutPromise]);
+      console.log('🔍 Claim process completed:', claimResult);
       
       if (!claimResult.success) {
         throw new Error(claimResult.message || 'Failed to claim reward');
@@ -939,12 +947,12 @@ const ScanScreen = () => {
           navigator.vibrate([200, 100, 200]);
         }
       }, 200);
-         } finally {
-       setTimeout(() => {
-         setIsLoading(false);
-         setIsProcessing(false);
-       }, 200);
-     }
+    } finally {
+      setTimeout(() => {
+        setIsLoading(false);
+        setIsProcessing(false);
+      }, 200);
+    }
    }, [user, isProcessing, validateQRPayload, checkExistingReward, fetchReward, addToCloset, updateWingsBalance, logActivity]);
 
   // Circular QR detection function - commented out for now

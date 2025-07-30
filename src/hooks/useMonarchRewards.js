@@ -132,6 +132,13 @@ export const useMonarchRewards = () => {
     try {
       setError(null);
       
+      // Add overall timeout to prevent hanging
+      const overallTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Claim operation timeout')), 10000)
+      );
+      
+      const claimOperation = (async () => {
+      
       const reward = RewardUtils.getRewardById(rewardId);
       if (!reward) {
         throw new Error(`Reward not found: ${rewardId}`);
@@ -185,14 +192,27 @@ export const useMonarchRewards = () => {
         })
         .eq('id', user.id);
 
-      // Refresh user rewards
-      await loadUserRewards();
+      // Refresh user rewards (with timeout to prevent hanging)
+      try {
+        console.log('🔄 Refreshing user rewards...');
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('User rewards refresh timeout')), 3000)
+        );
+        await Promise.race([loadUserRewards(), timeoutPromise]);
+        console.log('✅ User rewards refreshed successfully');
+      } catch (refreshError) {
+        console.warn('⚠️ Failed to refresh user rewards (non-critical):', refreshError);
+        // Continue with the claim even if refresh fails
+      }
 
-      return {
-        success: true,
-        message: `Successfully claimed ${reward.name}!`,
-        reward: data
-      };
+        return {
+          success: true,
+          message: `Successfully claimed ${reward.name}!`,
+          reward: data
+        };
+      })();
+      
+      return await Promise.race([claimOperation, overallTimeout]);
     } catch (err) {
       console.error('Error claiming reward:', err);
       setError(err.message);

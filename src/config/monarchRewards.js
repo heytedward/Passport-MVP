@@ -347,6 +347,82 @@ export const MONARCH_REWARDS = {
       care: 'Spot clean only',
       sustainability: '100% recycled materials'
     }
+  },
+
+  // Additional rewards to match QR generator
+  MONARCH_SNAPBACK_CAP: {
+    rewardId: 'MONARCH_SNAPBACK_CAP',
+    name: 'Monarch Snapback Cap',
+    description: 'Embroidered snapback cap with adjustable strap and metallic butterfly accent',
+    category: 'headwear',
+    rarity: 'uncommon',
+    wingsValue: 35,
+    season: 'Spring2025',
+    isActive: true,
+    shopifyProductId: 'monarch-snapback-cap-001',
+    shopifyPrice: 2800, // $28.00
+    shopifyHandle: 'monarch-snapback-cap',
+    images: [
+      generateShopifyImage('monarch-snapback-cap-001', 'img_022', 'snapback-cap-front.jpg', 'Monarch Snapback Cap Front View'),
+      generateShopifyImage('monarch-snapback-cap-001', 'img_023', 'snapback-cap-side.jpg', 'Monarch Snapback Cap Side View')
+    ],
+    metadata: {
+      material: 'Premium cotton twill',
+      fit: 'Adjustable snapback',
+      features: ['Embroidered design', 'Adjustable fit', 'Metallic accent'],
+      care: 'Spot clean only',
+      sustainability: 'Sustainable materials'
+    }
+  },
+
+  MONARCH_PIN_SET: {
+    rewardId: 'MONARCH_PIN_SET',
+    name: 'Monarch Pin Set',
+    description: 'Collectible enamel pin set featuring butterfly designs and exclusive packaging',
+    category: 'accessories',
+    rarity: 'rare',
+    wingsValue: 45,
+    season: 'Spring2025',
+    isActive: true,
+    shopifyProductId: 'monarch-pin-set-001',
+    shopifyPrice: 1800, // $18.00
+    shopifyHandle: 'monarch-pin-set',
+    images: [
+      generateShopifyImage('monarch-pin-set-001', 'img_024', 'monarch-pin-set.jpg', 'Monarch Pin Set'),
+      generateShopifyImage('monarch-pin-set-001', 'img_025', 'monarch-pin-individual.jpg', 'Individual Monarch Pins')
+    ],
+    metadata: {
+      material: 'Enamel on metal',
+      setSize: '3 pins',
+      features: ['Collectible design', 'Enamel finish', 'Exclusive packaging'],
+      care: 'Store in provided case',
+      collectibility: 'Limited production runs'
+    }
+  },
+
+  MONARCH_BACKPACK: {
+    rewardId: 'MONARCH_BACKPACK',
+    name: 'Monarch Backpack',
+    description: 'Functional backpack with butterfly wing design and premium materials',
+    category: 'accessories',
+    rarity: 'rare',
+    wingsValue: 45,
+    season: 'Spring2025',
+    isActive: true,
+    shopifyProductId: 'monarch-backpack-001',
+    shopifyPrice: 4500, // $45.00
+    shopifyHandle: 'monarch-backpack',
+    images: [
+      generateShopifyImage('monarch-backpack-001', 'img_026', 'monarch-backpack-front.jpg', 'Monarch Backpack Front View'),
+      generateShopifyImage('monarch-backpack-001', 'img_027', 'monarch-backpack-interior.jpg', 'Monarch Backpack Interior')
+    ],
+    metadata: {
+      material: 'Premium canvas',
+      dimensions: '16" x 12" x 6"',
+      features: ['Butterfly wing design', 'Premium materials', 'Spacious interior'],
+      care: 'Spot clean only',
+      sustainability: 'Sustainable materials'
+    }
   }
 };
 

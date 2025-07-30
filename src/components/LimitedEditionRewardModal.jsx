@@ -574,8 +574,8 @@ const LimitedEditionRewardModal = ({
 
         {/* WINGS Earned */}
         {totalWingsValue && (
-          <WingsEarned aria-label={`Earned ${totalWingsValue} WINGS`}>
-            +{totalWingsValue} WINGS
+                      <WingsEarned aria-label={`Earned ${totalWingsValue} WNGS`}>
+                            +{totalWingsValue} WNGS
             {bonusWings > 0 && (
               <span className="bonus">(+{bonusWings} bonus)</span>
             )}

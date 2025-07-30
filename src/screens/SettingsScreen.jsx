@@ -1,12 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled, { useTheme } from 'styled-components';
 import GlassCard from '../components/GlassCard';
-import { createClient } from '@supabase/supabase-js';
+
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useThemes } from '../hooks/useThemes';
 import { gradientThemes } from '../styles/theme';
 import { performAuthCleanup, forcePageReload, emergencyCleanup } from '../utils/authCleanup';
+
+import { supabase } from '../utils/supabaseClient';
+import AvatarUpload from '../components/AvatarUpload';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -104,50 +107,7 @@ const Toggle = styled.input.attrs({ type: 'checkbox' })`
   accent-color: ${({ theme }) => theme.colors.accent};
 `;
 
-const AvatarUpload = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
-`;
 
-const AvatarImg = styled.img`
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid ${({ theme }) => theme.colors.accent};
-  position: relative;
-`;
-
-const AvatarPlaceholder = styled.div`
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: ${({ theme }) => theme.gradients.primary};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 2rem;
-  border: 2px solid ${({ theme }) => theme.colors.accent};
-  position: relative;
-`;
-
-const AvatarLoadingOverlay = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 1.2rem;
-  backdrop-filter: blur(2px);
-`;
 
 const Button = styled.button`
   background: ${({ theme }) => theme.gradients.primary};
@@ -165,36 +125,7 @@ const Button = styled.button`
   }
 `;
 
-const SocialAccounts = styled.div`
-  display: flex;
-  gap: 12px;
-`;
 
-const SocialIcon = styled.div`
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #fff;
-  border: 1.5px solid ${({ theme }) => theme.colors.glass};
-  padding: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  color: #000;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    transform: scale(1.1);
-    border-color: ${({ theme }) => theme.colors.accent.gold};
-  }
-`;
-
-const SocialIconImg = styled.img`
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-`;
 
 const GradientSwatchRow = styled.div`
   display: flex;
@@ -251,10 +182,7 @@ const SwatchLabel = styled.div`
   max-width: 60px;
 `;
 
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
-);
+
 
 const SettingsScreen = ({ 
   themeMode = process.env.REACT_APP_DEFAULT_THEME_MODE || 'dark', 
@@ -267,8 +195,8 @@ const SettingsScreen = ({
   const [open, setOpen] = useState('account');
   const [displayName, setDisplayName] = useState('');
   const [originalDisplayName, setOriginalDisplayName] = useState('');
+  const [isEditingDisplayName, setIsEditingDisplayName] = useState(false);
   const [emailPref, setEmailPref] = useState(true);
-  const [avatarLoading, setAvatarLoading] = useState(false);
 
   // Update display name and avatar when user changes
   useEffect(() => {
@@ -343,156 +271,9 @@ const SettingsScreen = ({
     }
   };
   const [avatar, setAvatar] = useState(null);
-  const fileInputRef = useRef();
   const navigate = useNavigate();
 
-  const handleAvatarChange = async (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be less than 5MB');
-        return;
-      }
-      
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
-        return;
-      }
 
-      setAvatarLoading(true);
-
-      try {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-        const filePath = `avatars/${fileName}`;
-
-        console.log('Starting avatar upload...');
-        
-        // First, try to create the storage bucket if it doesn't exist
-        try {
-          const { data: buckets } = await supabase.storage.listBuckets();
-          const avatarsBucket = buckets?.find(bucket => bucket.name === 'avatars');
-          
-          if (!avatarsBucket) {
-            console.log('Creating avatars storage bucket...');
-            const { error: bucketError } = await supabase.storage.createBucket('avatars', {
-              public: true,
-              allowedMimeTypes: ['image/*'],
-              fileSizeLimit: 5242880 // 5MB
-            });
-            
-            if (bucketError) {
-              console.error('Error creating bucket:', bucketError);
-              throw new Error('Failed to create storage bucket');
-            }
-          }
-        } catch (bucketError) {
-          console.error('Error with storage bucket:', bucketError);
-          // Continue with upload attempt anyway
-        }
-
-        // Upload to Supabase storage
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          throw uploadError;
-        }
-
-        // Get public URL
-        const { data } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(filePath);
-
-        console.log('Avatar uploaded successfully:', data.publicUrl);
-
-        // Update user profile with avatar_url
-        try {
-          const { error: updateError } = await supabase
-            .from('user_profiles')
-            .upsert({ 
-              id: user.id, 
-              avatar_url: data.publicUrl,
-              updated_at: new Date().toISOString()
-            });
-
-          if (updateError) {
-            console.error('Profile update error:', updateError);
-            throw new Error('Failed to update profile with avatar URL');
-          }
-          
-          console.log('Profile updated with avatar URL');
-        } catch (profileError) {
-          console.error('Profile update failed:', profileError);
-          throw profileError;
-        }
-
-        // Set avatar in local state
-        setAvatar(data.publicUrl);
-        
-        // Show success message
-        console.log('Avatar updated successfully!');
-        alert('Profile picture updated successfully!');
-        
-      } catch (error) {
-        console.error('Error uploading avatar:', error);
-        
-        // Show user-friendly error message
-        let errorMessage = 'Failed to upload image. Please try again.';
-        
-        if (error.message.includes('storage')) {
-          errorMessage = 'Storage service unavailable. Please try again later.';
-        } else if (error.message.includes('file')) {
-          errorMessage = 'Invalid file type. Please select an image file.';
-        }
-        
-        alert(errorMessage);
-        
-        // Fallback to local preview (temporary)
-        setAvatar(URL.createObjectURL(file));
-      } finally {
-        setAvatarLoading(false);
-      }
-    }
-  };
-
-  const handleRemoveAvatar = async () => {
-    if (!avatar) return;
-    
-    try {
-      setAvatarLoading(true);
-      
-      // Remove avatar from user profile
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ 
-          avatar_url: null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
-
-      if (error) {
-        console.error('Error removing avatar:', error);
-        throw error;
-      }
-
-      setAvatar(null);
-      alert('Profile picture removed successfully!');
-    } catch (error) {
-      console.error('Error removing avatar:', error);
-      alert('Failed to remove profile picture. Please try again.');
-    } finally {
-      setAvatarLoading(false);
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -565,6 +346,8 @@ const SettingsScreen = ({
     navigate('/login');
   };
 
+
+
   return (
     <Container>
       <Accordion>
@@ -580,38 +363,13 @@ const SettingsScreen = ({
             <AccordionContent>
               <SettingRow>
                 <Label>Profile Picture</Label>
-                <AvatarUpload>
-                  <div style={{ position: 'relative' }}>
-                    {avatar ? (
-                      <AvatarImg src={avatar} alt="Avatar" />
-                    ) : (
-                      <AvatarPlaceholder>🦋</AvatarPlaceholder>
-                    )}
-                    {avatarLoading && (
-                      <AvatarLoadingOverlay>
-                        ⏳
-                      </AvatarLoadingOverlay>
-                    )}
-                  </div>
-                  <Button 
-                    type="button" 
-                    onClick={() => fileInputRef.current.click()}
-                    disabled={avatarLoading}
-                    style={{
-                      opacity: avatarLoading ? 0.6 : 1,
-                      cursor: avatarLoading ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    {avatarLoading ? 'Uploading...' : 'Change'}
-                  </Button>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    ref={fileInputRef}
-                    onChange={handleAvatarChange}
-                  />
-                </AvatarUpload>
+                <AvatarUpload
+                  userId={user?.id}
+                  currentAvatarUrl={avatar}
+                  onAvatarUpdate={(newAvatarUrl) => setAvatar(newAvatarUrl)}
+                  size={80}
+                  showButton={true}
+                />
               </SettingRow>
               <SettingRow>
                 <Label htmlFor="displayName">
@@ -622,59 +380,85 @@ const SettingsScreen = ({
                     id="displayName"
                     value={displayName}
                     onChange={e => setDisplayName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && isEditingDisplayName && displayName !== originalDisplayName) {
+                        e.preventDefault();
+                        // Trigger save
+                        e.target.nextSibling?.click();
+                      } else if (e.key === 'Escape' && isEditingDisplayName) {
+                        e.preventDefault();
+                        // Trigger cancel
+                        setDisplayName(originalDisplayName);
+                        setIsEditingDisplayName(false);
+                      }
+                    }}
                     placeholder="Enter your display name"
+                    disabled={!isEditingDisplayName}
                     style={{
                       borderColor: displayName !== originalDisplayName 
                         ? 'rgba(255, 215, 0, 0.5)' 
                         : undefined,
                       boxShadow: displayName !== originalDisplayName 
                         ? '0 0 8px rgba(255, 215, 0, 0.2)' 
-                        : undefined
+                        : undefined,
+                      opacity: isEditingDisplayName ? 1 : 0.7,
+                      cursor: isEditingDisplayName ? 'text' : 'default'
                     }}
                   />
                   <Button 
                     type="button" 
                     onClick={async () => {
-                      try {
-                        const { error } = await supabase
-                          .from('user_profiles')
-                          .upsert({ 
-                            id: user.id, 
-                            display_name: displayName,
-                            updated_at: new Date().toISOString()
+                      if (!isEditingDisplayName) {
+                        // Enter edit mode
+                        setIsEditingDisplayName(true);
+                      } else if (displayName !== originalDisplayName) {
+                        // Save changes
+                        try {
+                          const { error } = await supabase
+                            .from('user_profiles')
+                            .upsert({ 
+                              id: user.id, 
+                              display_name: displayName,
+                              updated_at: new Date().toISOString()
+                            });
+                          
+                          if (error) throw error;
+                          
+                          // Update user metadata
+                          const { error: metadataError } = await supabase.auth.updateUser({
+                            data: { username: displayName }
                           });
-                        
-                        if (error) throw error;
-                        
-                        // Update user metadata
-                        const { error: metadataError } = await supabase.auth.updateUser({
-                          data: { username: displayName }
-                        });
-                        
-                        if (metadataError) throw metadataError;
-                        
-                        setOriginalDisplayName(displayName);
-                        alert('Display name updated successfully!');
-                      } catch (error) {
-                        console.error('Error updating display name:', error);
-                        alert('Failed to update display name. Please try again.');
+                          
+                          if (metadataError) throw metadataError;
+                          
+                          setOriginalDisplayName(displayName);
+                          setIsEditingDisplayName(false);
+                          alert('Display name updated successfully!');
+                        } catch (error) {
+                          console.error('Error updating display name:', error);
+                          alert('Failed to update display name. Please try again.');
+                        }
+                      } else {
+                        // Cancel editing - reset to original value
+                        setDisplayName(originalDisplayName);
+                        setIsEditingDisplayName(false);
                       }
                     }}
                     style={{ 
                       padding: '8px 16px', 
                       fontSize: '0.9rem',
-                      background: displayName !== originalDisplayName 
+                      background: isEditingDisplayName && displayName !== originalDisplayName
                         ? 'rgba(255, 215, 0, 0.3)' 
                         : 'rgba(255, 215, 0, 0.2)',
-                      border: displayName !== originalDisplayName 
+                      border: isEditingDisplayName && displayName !== originalDisplayName
                         ? '1px solid rgba(255, 215, 0, 0.5)' 
                         : '1px solid rgba(255, 215, 0, 0.3)',
-                      color: displayName !== originalDisplayName ? '#000' : '#fff',
-                      fontWeight: displayName !== originalDisplayName ? 'bold' : 'normal'
+                      color: isEditingDisplayName && displayName !== originalDisplayName ? '#000' : '#fff',
+                      fontWeight: isEditingDisplayName && displayName !== originalDisplayName ? 'bold' : 'normal'
                     }}
-                    disabled={displayName === originalDisplayName}
+                    disabled={isEditingDisplayName && displayName === originalDisplayName}
                   >
-                    {displayName !== originalDisplayName ? 'Save Changes' : 'Save'}
+                    {isEditingDisplayName ? (displayName !== originalDisplayName ? 'Save' : 'Cancel') : 'Change'}
                   </Button>
                 </div>
               </SettingRow>
@@ -694,33 +478,9 @@ const SettingsScreen = ({
                 <Label>Password/Security</Label>
                 <Button type="button">Change Password</Button>
               </SettingRow>
-              <SettingRow>
-                <Label>Connected Accounts</Label>
-                <SocialAccounts>
-                  <SocialIcon title="Google">
-                    <SocialIconImg 
-                      src="/google-icon.svg" 
-                      alt="Google" 
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                    <span style={{ display: 'none' }}>G</span>
-                  </SocialIcon>
-                  <SocialIcon title="Apple">
-                    <SocialIconImg 
-                      src="/apple-icon.svg" 
-                      alt="Apple" 
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                    <span style={{ display: 'none' }}>🍎</span>
-                  </SocialIcon>
-                </SocialAccounts>
-              </SettingRow>
+
+
+
               {user ? (
                 <div>
                   <div style={{ marginBottom: '1rem', color: '#fff', fontSize: '0.9rem' }}>

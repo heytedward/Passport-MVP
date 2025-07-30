@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SupabaseConnectionTest from '../components/SupabaseConnectionTest';
 
 const AdminScreen = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -108,7 +109,8 @@ const AdminScreen = () => {
     { id: 'users', icon: '👥', label: 'Users' },
     { id: 'rewards', icon: '🎁', label: 'Rewards' },
     { id: 'categories', icon: '📱', label: 'Categories' },
-    { id: 'analytics', icon: '📈', label: 'Analytics' }
+    { id: 'analytics', icon: '📈', label: 'Analytics' },
+    { id: 'connection', icon: '🔗', label: 'Connection Test' }
   ];
 
   // Handlers
@@ -1244,6 +1246,13 @@ const AdminScreen = () => {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Connection Test Tab */}
+        {activeTab === 'connection' && (
+          <div>
+            <SupabaseConnectionTest />
           </div>
         )}
 

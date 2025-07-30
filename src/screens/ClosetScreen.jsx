@@ -298,6 +298,14 @@ const Container = styled.div`
   margin: 0 auto;
   padding: 2rem 1rem 6rem 1rem;
   min-height: 100vh;
+  
+  @media (max-width: 768px) {
+    padding: 1rem 0.5rem 6rem 0.5rem;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 0.75rem 0.25rem 6rem 0.25rem;
+  }
 `;
 
 const ScreenTitle = styled.h1`
@@ -307,6 +315,16 @@ const ScreenTitle = styled.h1`
   font-size: 2rem;
   margin-bottom: 1.5rem;
   text-align: center;
+  
+  @media (max-width: 768px) {
+    font-size: 1.75rem;
+    margin-bottom: 1rem;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
 `;
 
 const MainFilterTabs = styled.div`
@@ -314,6 +332,16 @@ const MainFilterTabs = styled.div`
   gap: 1rem;
   margin-bottom: 1.5rem;
   justify-content: center;
+  
+  @media (max-width: 768px) {
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  
+  @media (max-width: 480px) {
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
 `;
 
 const SubFilterTabs = styled.div`
@@ -374,13 +402,18 @@ const ItemsGrid = styled.div`
   margin-bottom: 2rem;
   
   @media (max-width: 768px) {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
   }
   
   @media (max-width: 480px) {
-    grid-template-columns: repeat(1, 1fr);
-    gap: 8px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  
+  @media (max-width: 360px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
   }
 `;
 
@@ -388,6 +421,14 @@ const ItemCard = styled(GlassCard)`
   padding: 1.5rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 0.75rem;
+  }
   border: 3px solid ${({ rarity, theme, isLimitedEdition }) => {
     if (isLimitedEdition) return '#FFB000';
     switch(rarity) {
@@ -606,6 +647,143 @@ const EmptyState = styled.div`
   color: ${({ theme }) => theme.colors.text.secondary};
 `;
 
+// Floating Stats Button
+const FloatingStatsButton = styled.button`
+  position: fixed;
+  top: 100px;
+  right: 20px;
+  z-index: 1000;
+  background: linear-gradient(135deg, #FFB000, #FFD700);
+  border: none;
+  border-radius: 50px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255, 176, 0, 0.3);
+  transition: all 0.3s ease;
+  font-weight: 600;
+  color: #000;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(255, 176, 0, 0.4);
+  }
+  
+  .stats-icon {
+    font-size: 1.2rem;
+  }
+  
+  .stats-count {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  
+  @media (max-width: 768px) {
+    top: 80px;
+    right: 15px;
+    padding: 10px 14px;
+    
+    .stats-icon {
+      font-size: 1rem;
+    }
+    
+    .stats-count {
+      font-size: 0.9rem;
+    }
+  }
+`;
+
+// Stats Modal
+const StatsModal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+`;
+
+const ModalContent = styled.div`
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  
+  h2 {
+    color: ${({ theme }) => theme.colors.text.primary};
+    margin: 0;
+    font-size: 1.5rem;
+  }
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: ${({ theme }) => theme.colors.text.primary};
+  }
+`;
+
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+`;
+
+const StatItem = styled.div`
+  text-align: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+`;
+
+const StatLabel = styled.div`
+  font-size: 0.8rem;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
+const StatValue = styled.div`
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.text.primary};
+`;
+
 const Stats = styled.div`
   display: flex;
   gap: 2rem;
@@ -727,7 +905,7 @@ const BackFace = styled(Face)`
   transform: rotateY(180deg);
 `;
 
-const CloseButton = styled.button`
+const ModalCloseButton = styled.button`
   position: absolute;
   top: 16px;
   right: 16px;
@@ -858,7 +1036,7 @@ const ItemModal = ({ item, isOpen, onClose }) => {
   
   return (
     <ModalOverlay onClick={handleOverlayClick}>
-      <CloseButton onClick={onClose} aria-label="Close">×</CloseButton>
+      <ModalCloseButton onClick={onClose} aria-label="Close">×</ModalCloseButton>
       <ModalCard onClick={e => e.stopPropagation()}>
         <FlipInner isflipped={isFlipped}>
           <FrontFace 
@@ -1007,6 +1185,7 @@ const ClosetScreen = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [showStatsModal, setShowStatsModal] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -1202,244 +1381,279 @@ const ClosetScreen = () => {
   return (
     <Container>
       <ScreenTitle>My Closet</ScreenTitle>
-      
-      <Stats>
-        <div>Total: {stats.total}</div>
-        <div>Physical: {stats.physical}</div>
-        <div>Digital: {stats.digital}</div>
-        <div>Limited: {stats.limited}</div>
-        <div>Legendary: {stats.legendary}</div>
-        <div>Epic: {stats.epic}</div>
-      </Stats>
+      <>
+        {/* Floating Stats Button */}
+        <FloatingStatsButton onClick={() => setShowStatsModal(true)}>
+          <span className="stats-count">{stats.total}</span>
+        </FloatingStatsButton>
 
-      {/* Limited Edition Collection Stats */}
-      {limitedEditionStats.total > 0 && (
-        <LimitedEditionStats>
-          <h3>Limited Edition Collection</h3>
-          <div className="stats-grid">
-            <div className="stat-item">
-              <div className="label">Total Limited Items</div>
-              <div className="value">{limitedEditionStats.total}</div>
-            </div>
-            <div className="stat-item">
-              <div className="label">Total Supply</div>
-              <div className="value">{limitedEditionStats.totalSupply.toLocaleString()}</div>
-            </div>
-            <div className="stat-item">
-              <div className="label">Avg. Rarity</div>
-              <div className="value">{Math.round(limitedEditionStats.averageRarity)}</div>
-            </div>
-          </div>
-          <div className="exclusivity-breakdown">
-            {Object.entries(limitedEditionStats.byExclusivity).map(([level, count]) => (
-              <LimitedEditionBadge
-                key={level}
-                exclusivityLevel={level}
-                size="small"
-                showIcon={false}
-              />
-            ))}
-          </div>
-        </LimitedEditionStats>
-      )}
+        {/* Stats Modal */}
+        {showStatsModal && (
+          <StatsModal onClick={() => setShowStatsModal(false)}>
+            <ModalContent onClick={(e) => e.stopPropagation()}>
+              <ModalHeader>
+                <h2>Collection Stats</h2>
+                <CloseButton onClick={() => setShowStatsModal(false)}>×</CloseButton>
+              </ModalHeader>
+              <StatsGrid>
+                <StatItem>
+                  <StatLabel>Total Items</StatLabel>
+                  <StatValue>{stats.total}</StatValue>
+                </StatItem>
+                <StatItem>
+                  <StatLabel>Physical</StatLabel>
+                  <StatValue>{stats.physical}</StatValue>
+                </StatItem>
+                <StatItem>
+                  <StatLabel>Digital</StatLabel>
+                  <StatValue>{stats.digital}</StatValue>
+                </StatItem>
+                <StatItem>
+                  <StatLabel>Limited Edition</StatLabel>
+                  <StatValue>{stats.limited}</StatValue>
+                </StatItem>
+                <StatItem>
+                  <StatLabel>Legendary</StatLabel>
+                  <StatValue>{stats.legendary}</StatValue>
+                </StatItem>
+                <StatItem>
+                  <StatLabel>Epic</StatLabel>
+                  <StatValue>{stats.epic}</StatValue>
+                </StatItem>
+              </StatsGrid>
+            </ModalContent>
+          </StatsModal>
+        )}
 
-      <MainFilterTabs>
-        <FilterTab 
-          type="main"
-          active={mainFilter === 'all'} 
-          onClick={() => {
-            setMainFilter('all');
-            setSubFilter('all');
-          }}
-        >
-          All Items
-        </FilterTab>
-        <FilterTab 
-          type="main"
-          active={mainFilter === 'physical'} 
-          onClick={() => {
-            setMainFilter('physical');
-            setSubFilter('all');
-          }}
-        >
-          Physical
-        </FilterTab>
-        <FilterTab 
-          type="main"
-          active={mainFilter === 'digital'} 
-          onClick={() => {
-            setMainFilter('digital');
-            setSubFilter('all');
-          }}
-        >
-          Digital
-        </FilterTab>
-        <FilterTab 
-          type="main"
-          active={mainFilter === 'limited'} 
-          onClick={() => {
-            setMainFilter('limited');
-            setSubFilter('all');
-          }}
-        >
-          Limited Edition
-        </FilterTab>
-      </MainFilterTabs>
-
-      <SubFilterTabs>
-        <FilterTab 
-          type="sub"
-          active={subFilter === 'all'} 
-          onClick={() => setSubFilter('all')}
-        >
-          All Categories
-        </FilterTab>
-        {getSubFilterOptions().map(category => (
-          <FilterTab 
-            key={category}
-            type="sub"
-            active={subFilter === category} 
-            onClick={() => setSubFilter(category)}
-          >
-            {getCategoryDisplayName(category)}
-          </FilterTab>
-        ))}
-      </SubFilterTabs>
-
-      {filteredItems.length > 0 ? (
-        <ItemsGrid>
-          {filteredItems.map(item => (
-            <ItemCard 
-              key={item.id}
-              rarity={item.rarity}
-              isLimitedEdition={item.isLimitedEdition}
-              onClick={() => setSelectedItem(item)}
-              style={item.category === 'themes' ? {
-                background: item.gradient,
-                border: item.equipped ? '3px solid #FFD700' : '3px solid rgba(255, 255, 255, 0.2)',
-                opacity: item.unlocked ? 1 : 0.6
-              } : {}}
-            >
-              {/* Limited Edition Indicator */}
-              {item.isLimitedEdition && (
-                <LimitedEditionIndicator>
-                  Limited
-                </LimitedEditionIndicator>
-              )}
-              
-              {/* Mint Number Badge */}
-              {item.mint_number && (
-                <MintNumberBadge>
-                  #{item.mint_number}
-                </MintNumberBadge>
-              )}
-              
-              <CardContent>
-                <CardIcon>
-                  {item.preview_mp4 && item.file_type === '3d_model' ? (
-                    <VideoPreview
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      src={item.preview_mp4}
-                    />
-                  ) : (
-                    <div style={{ 
-                      fontSize: item.category === 'themes' ? '3rem' : '3rem',
-                      position: 'relative' 
-                    }}>
-                      {getItemIcon(item.category, item.item_type, item)}
-                      {item.category === 'themes' && !item.unlocked && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          fontSize: '1.5rem',
-                          color: '#fff',
-                          textShadow: '0 0 4px rgba(0,0,0,0.8)'
-                        }}>
-                          🔒
-                        </div>
-                      )}
-                      {item.category === 'themes' && item.equipped && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '-10px',
-                          right: '-10px',
-                          fontSize: '1rem',
-                          color: '#FFD700'
-                        }}>
-                          ✓
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardIcon>
-                
-                <div>
-                  <CardName>{item.name}</CardName>
-                  <CardRarity rarity={item.rarity}>{item.rarity}</CardRarity>
-                  
-                  {/* Theme-specific indicators */}
-                  {item.category === 'themes' && item.equipped && (
-                    <div style={{ 
-                      color: '#FFD700', 
-                      fontSize: '0.6rem', 
-                      fontWeight: '600',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      ✓ Equipped
-                    </div>
-                  )}
-                  {item.category === 'themes' && !item.unlocked && (
-                    <div style={{ 
-                      color: '#ff6b6b', 
-                      fontSize: '0.6rem', 
-                      fontWeight: '600',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      🔒 Locked
-                    </div>
-                  )}
+          {/* Limited Edition Collection Stats */}
+          {limitedEditionStats.total > 0 && (
+            <LimitedEditionStats>
+              <h3>Limited Edition Collection</h3>
+              <div className="stats-grid">
+                <div className="stat-item">
+                  <div className="label">Total Limited Items</div>
+                  <div className="value">{limitedEditionStats.total}</div>
                 </div>
-              </CardContent>
-            </ItemCard>
-          ))}
-        </ItemsGrid>
-      ) : (
-        <EmptyState>
-          {loading ? (
-            <>
-              <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⏳</div>
-              <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Loading your closet...</div>
-              <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)' }}>Checking for your Papillon treasures</div>
-            </>
-          ) : mainFilter === 'all' ? (
-            <>
-              <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>👕</div>
-              <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Your closet is looking a bit empty...</div>
-              <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)' }}>Start scanning QR codes to collect your first Papillon items!</div>
-            </>
-          ) : (
-            <>
-              <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔍</div>
-              <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>No {mainFilter} items found</div>
-              <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)' }}>Try scanning more QR codes or check other categories</div>
-            </>
+                <div className="stat-item">
+                  <div className="label">Total Supply</div>
+                  <div className="value">{limitedEditionStats.totalSupply.toLocaleString()}</div>
+                </div>
+                <div className="stat-item">
+                  <div className="label">Avg. Rarity</div>
+                  <div className="value">{Math.round(limitedEditionStats.averageRarity)}</div>
+                </div>
+              </div>
+              <div className="exclusivity-breakdown">
+                {Object.entries(limitedEditionStats.byExclusivity).map(([level, count]) => (
+                  <LimitedEditionBadge
+                    key={level}
+                    exclusivityLevel={level}
+                    size="small"
+                    showIcon={false}
+                  />
+                ))}
+              </div>
+            </LimitedEditionStats>
           )}
-        </EmptyState>
-      )}
 
-      {/* Item Modal */}
-      <ItemModal
-        item={selectedItem}
-        isOpen={!!selectedItem}
-        onClose={() => setSelectedItem(null)}
-      />
+          <MainFilterTabs>
+            <FilterTab 
+              type="main"
+              active={mainFilter === 'all'} 
+              onClick={() => {
+                setMainFilter('all');
+                setSubFilter('all');
+              }}
+            >
+              All Items
+            </FilterTab>
+            <FilterTab 
+              type="main"
+              active={mainFilter === 'physical'} 
+              onClick={() => {
+                setMainFilter('physical');
+                setSubFilter('all');
+              }}
+            >
+              Physical
+            </FilterTab>
+            <FilterTab 
+              type="main"
+              active={mainFilter === 'digital'} 
+              onClick={() => {
+                setMainFilter('digital');
+                setSubFilter('all');
+              }}
+            >
+              Digital
+            </FilterTab>
+            <FilterTab 
+              type="main"
+              active={mainFilter === 'limited'} 
+              onClick={() => {
+                setMainFilter('limited');
+                setSubFilter('all');
+              }}
+            >
+              Limited Edition
+            </FilterTab>
+          </MainFilterTabs>
+
+          <SubFilterTabs>
+            <FilterTab 
+              type="sub"
+              active={subFilter === 'all'} 
+              onClick={() => setSubFilter('all')}
+            >
+              All Categories
+            </FilterTab>
+            {getSubFilterOptions().map(category => (
+              <FilterTab 
+                key={category}
+                type="sub"
+                active={subFilter === category} 
+                onClick={() => setSubFilter(category)}
+              >
+                {getCategoryDisplayName(category)}
+              </FilterTab>
+            ))}
+          </SubFilterTabs>
+
+          {filteredItems.length > 0 ? (
+            <ItemsGrid>
+              {filteredItems.map(item => (
+                <ItemCard 
+                  key={item.id}
+                  rarity={item.rarity}
+                  isLimitedEdition={item.isLimitedEdition}
+                  onClick={() => setSelectedItem(item)}
+                  style={item.category === 'themes' ? {
+                    background: item.gradient,
+                    border: item.equipped ? '3px solid #FFD700' : '3px solid rgba(255, 255, 255, 0.2)',
+                    opacity: item.unlocked ? 1 : 0.6
+                  } : {}}
+                >
+                  {/* Limited Edition Indicator */}
+                  {item.isLimitedEdition && (
+                    <LimitedEditionIndicator>
+                      Limited
+                    </LimitedEditionIndicator>
+                  )}
+                  
+                  {/* Mint Number Badge */}
+                  {item.mint_number && (
+                    <MintNumberBadge>
+                      #{item.mint_number}
+                    </MintNumberBadge>
+                  )}
+                  
+                  <CardContent>
+                    <CardIcon>
+                      {item.preview_mp4 && item.file_type === '3d_model' ? (
+                        <VideoPreview
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          src={item.preview_mp4}
+                        />
+                      ) : (
+                        <div style={{ 
+                          fontSize: item.category === 'themes' ? '3rem' : '3rem',
+                          position: 'relative' 
+                        }}>
+                          {getItemIcon(item.category, item.item_type, item)}
+                          {item.category === 'themes' && !item.unlocked && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '50%',
+                              left: '50%',
+                              transform: 'translate(-50%, -50%)',
+                              fontSize: '1.5rem',
+                              color: '#fff',
+                              textShadow: '0 0 4px rgba(0,0,0,0.8)'
+                            }}>
+                              🔒
+                            </div>
+                          )}
+                          {item.category === 'themes' && item.equipped && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '-10px',
+                              right: '-10px',
+                              fontSize: '1rem',
+                              color: '#FFD700'
+                            }}>
+                              ✓
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </CardIcon>
+                    
+                    <div>
+                      <CardName>{item.name}</CardName>
+                      <CardRarity rarity={item.rarity}>{item.rarity}</CardRarity>
+                      
+                      {/* Theme-specific indicators */}
+                      {item.category === 'themes' && item.equipped && (
+                        <div style={{ 
+                          color: '#FFD700', 
+                          fontSize: '0.6rem', 
+                          fontWeight: '600',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          ✓ Equipped
+                        </div>
+                      )}
+                      {item.category === 'themes' && !item.unlocked && (
+                        <div style={{ 
+                          color: '#ff6b6b', 
+                          fontSize: '0.6rem', 
+                          fontWeight: '600',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
+                        }}>
+                          🔒 Locked
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </ItemCard>
+              ))}
+            </ItemsGrid>
+          ) : (
+            <EmptyState>
+              {loading ? (
+                <>
+                  <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⏳</div>
+                  <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Loading your closet...</div>
+                  <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)' }}>Checking for your Papillon treasures</div>
+                </>
+              ) : mainFilter === 'all' ? (
+                <>
+                  <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>👕</div>
+                  <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Your closet is looking a bit empty...</div>
+                  <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)' }}>Start scanning QR codes to collect your first Papillon items!</div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔍</div>
+                  <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>No {mainFilter} items found</div>
+                  <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)' }}>Try scanning more QR codes or check other categories</div>
+                </>
+              )}
+            </EmptyState>
+          )}
+
+          {/* Item Modal */}
+          <ItemModal
+            item={selectedItem}
+            isOpen={!!selectedItem}
+            onClose={() => setSelectedItem(null)}
+          />
+        </>
     </Container>
   );
 };
@@ -1498,5 +1712,9 @@ const getCategoryDisplayName = (category) => {
   
   return displayNames[category] || category.charAt(0).toUpperCase() + category.slice(1);
 };
+
+
+
+
 
 export default ClosetScreen; 

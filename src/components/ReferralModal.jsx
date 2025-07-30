@@ -205,7 +205,7 @@ function ReferralModal({ open, onClose }) {
       title: 'Referral Shared',
       description: 'Shared referral code via social media',
       status: 'Completed',
-      reward: '+50 WINGS',
+      reward: '+50 WNGS',
       date: 'Mar 18, 2025'
     },
     {
@@ -213,7 +213,7 @@ function ReferralModal({ open, onClose }) {
       title: 'Friend Joined',
       description: 'New user joined via your referral link',
       status: 'Completed', 
-      reward: '+25 WINGS',
+      reward: '+25 WNGS',
       date: 'Mar 17, 2025'
     },
     {
@@ -221,7 +221,7 @@ function ReferralModal({ open, onClose }) {
       title: 'Share Referral',
       description: 'Invite more friends to earn bonus rewards',
       status: 'Available',
-      reward: '+50 WINGS',
+      reward: '+50 WNGS',
       date: ''
     }
   ];

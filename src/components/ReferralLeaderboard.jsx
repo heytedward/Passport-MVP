@@ -119,7 +119,7 @@ const ReferralLeaderboard = ({ maxItems = 10 }) => {
             <UserName>{user.name}</UserName>
             <ReferralCount>{user.referrals} referrals</ReferralCount>
           </UserInfo>
-          <WingsEarned>{user.wingsEarned} WINGS</WingsEarned>
+          <WingsEarned>{user.wingsEarned} WNGS</WingsEarned>
         </LeaderboardItem>
       ))}
     </LeaderboardCard>
