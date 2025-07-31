@@ -751,23 +751,19 @@ function ProfileScreen() {
     <Container>
       <TopRow>
         <ProfileHeader onClick={() => navigate('/settings')}>
-          <Avatar>
-            {profile?.avatar ? (
-              <img 
-                src={profile.avatar} 
-                alt="Profile" 
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  borderRadius: '50%',
-                  objectFit: 'cover'
-                }}
-              />
-            ) : (
-              user?.user_metadata?.username ? user.user_metadata.username.charAt(0).toUpperCase() : 
-              user?.email ? user.email.charAt(0).toUpperCase() : 'U'
-            )}
-          </Avatar>
+          <Avatar
+  style={profile?.avatar ? {
+    backgroundImage: `url(${profile.avatar})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+    color: 'transparent'
+  } : {}}>
+  {!profile?.avatar && (
+    user?.user_metadata?.username ? user.user_metadata.username.charAt(0).toUpperCase() : 
+    user?.email ? user.email.charAt(0).toUpperCase() : 'U'
+  )}
+</Avatar>
           <ProfileName>
             {user?.user_metadata?.username || user?.email?.split('@')[0] || 'User'}
           </ProfileName>
