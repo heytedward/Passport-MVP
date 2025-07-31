@@ -183,18 +183,28 @@ const AvatarUpload = ({
 
         console.log('Avatar uploaded successfully:', data.publicUrl);
 
-        // Update user profile with new avatar URL
+        // Update user profile with new avatar URL (create if doesn't exist)
         const { error: updateError } = await supabase
           .from('user_profiles')
-          .update({ 
+          .upsert({ 
+            id: userId,
             avatar_url: data.publicUrl,
+            email: (await supabase.auth.getUser()).data.user?.email,
+            username: (await supabase.auth.getUser()).data.user?.user_metadata?.username || (await supabase.auth.getUser()).data.user?.email,
+            display_name: (await supabase.auth.getUser()).data.user?.user_metadata?.username || (await supabase.auth.getUser()).data.user?.email,
             updated_at: new Date().toISOString()
-          })
-          .eq('id', userId);
+          });
 
         if (updateError) {
           console.error('Profile update error:', updateError);
-          throw new Error('Failed to update profile');
+          // Provide more specific error message based on the error type
+          if (updateError.code === '42501') {
+            throw new Error('Permission denied - please contact support');
+          } else if (updateError.code === '23505') {
+            throw new Error('Profile already exists - please try again');
+          } else {
+            throw new Error(`Failed to update profile: ${updateError.message}`);
+          }
         }
 
         return data.publicUrl;

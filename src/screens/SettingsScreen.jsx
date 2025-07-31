@@ -190,87 +190,63 @@ const SettingsScreen = ({
   gradientKey = process.env.REACT_APP_DEFAULT_GRADIENT || 'monarch', 
   onGradientChange = () => {} 
 }) => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, profile, refreshProfile } = useAuth();
   const { ownedThemes, equippedTheme, equipTheme, checkThemeOwnership } = useThemes();
   const [open, setOpen] = useState('account');
   const [displayName, setDisplayName] = useState('');
   const [originalDisplayName, setOriginalDisplayName] = useState('');
   const [isEditingDisplayName, setIsEditingDisplayName] = useState(false);
   const [emailPref, setEmailPref] = useState(true);
+  const [avatar, setAvatar] = useState(null);
 
-  // Update display name and avatar when user changes
+  // Update display name and avatar when user or profile changes
   useEffect(() => {
     if (user) {
       const name = user.user_metadata?.username || user.email?.split('@')[0] || 'User';
       setDisplayName(name);
       setOriginalDisplayName(name);
-      loadUserProfile();
-    }
-  }, [user]);
+      
+      // Set avatar from profile if available
+      if (profile?.avatar_url) {
+        setAvatar(profile.avatar_url);
+      } else {
+        setAvatar(null);
+      }
 
-  const loadUserProfile = async () => {
-    if (!user) return;
+      // Ensure profile exists in database
+      ensureProfileExists();
+    }
+  }, [user, profile]);
+
+  const ensureProfileExists = async () => {
+    if (!user || profile) return; // Skip if user doesn't exist or profile already exists
     
     try {
-      console.log('Loading user profile for:', user.id);
+      console.log('Ensuring profile exists for user:', user.id);
       
-      const { data: profile, error } = await supabase
+      const { error } = await supabase
         .from('user_profiles')
-        .select('avatar_url, display_name, email')
-        .eq('id', user.id)
-        .single();
+        .upsert({
+          id: user.id,
+          display_name: user.user_metadata?.username || user.email?.split('@')[0] || 'User',
+          email: user.email,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching profile:', error);
-        return;
-      }
-
-      if (profile) {
-        console.log('Profile loaded:', profile);
-        
-        // Set avatar if available
-        if (profile.avatar_url) {
-          console.log('Setting avatar:', profile.avatar_url);
-          setAvatar(profile.avatar_url);
-        } else {
-          console.log('No avatar URL found');
-          setAvatar(null);
-        }
-        
-        // Only set display name if we don't already have one from user metadata
-        // and if the profile has a display_name
-        if (profile.display_name && !user.user_metadata?.username) {
-          setDisplayName(profile.display_name);
-          setOriginalDisplayName(profile.display_name);
-        }
+      if (error) {
+        console.error('Error creating profile:', error);
       } else {
-        console.log('No profile found for user');
-        // Create a basic profile record if none exists
-        try {
-          const { error: insertError } = await supabase
-            .from('user_profiles')
-            .insert({
-              id: user.id,
-              display_name: user.user_metadata?.username || user.email?.split('@')[0] || 'User',
-              email: user.email,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
-          
-          if (insertError) {
-            console.error('Error creating profile:', insertError);
-          } else {
-            console.log('Created new user profile');
-          }
-        } catch (insertError) {
-          console.error('Error creating profile:', insertError);
-        }
+        console.log('Profile created successfully');
+        // Refresh the profile to get the updated data
+        await refreshProfile();
       }
     } catch (error) {
-      console.error('Error loading profile:', error);
+      console.error('Error ensuring profile exists:', error);
     }
   };
-  const [avatar, setAvatar] = useState(null);
+
+  // Remove loadUserProfile function since we're now using the profile from useAuth
   const navigate = useNavigate();
 
 
@@ -299,7 +275,6 @@ const SettingsScreen = ({
         await performAuthCleanup();
         
         console.log('Sign out successful, navigating to home...');
-        alert('Sign out successful! Redirecting...');
         navigate('/');
       } else {
         console.log('useAuth signOut not available, trying direct Supabase...');
@@ -314,7 +289,6 @@ const SettingsScreen = ({
         await performAuthCleanup();
         
         console.log('Sign out successful, navigating to home...');
-        alert('Sign out successful! Redirecting...');
         navigate('/');
       }
     } catch (error) {
@@ -323,7 +297,6 @@ const SettingsScreen = ({
       // If it's a timeout, force comprehensive cleanup
       if (error.message.includes('timeout')) {
         console.log('Network timeout detected, forcing comprehensive cleanup...');
-        alert('Network timeout - performing comprehensive cleanup and redirecting...');
         
         // Use emergency cleanup for timeout scenarios
         emergencyCleanup();
@@ -366,7 +339,11 @@ const SettingsScreen = ({
                 <AvatarUpload
                   userId={user?.id}
                   currentAvatarUrl={avatar}
-                  onAvatarUpdate={(newAvatarUrl) => setAvatar(newAvatarUrl)}
+                  onAvatarUpdate={async (newAvatarUrl) => {
+                    setAvatar(newAvatarUrl);
+                    // Refresh the profile to ensure consistency
+                    await refreshProfile();
+                  }}
                   size={80}
                   showButton={true}
                 />

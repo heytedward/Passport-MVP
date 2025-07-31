@@ -89,7 +89,7 @@ async function testAuthentication(supabase) {
 
     // Test sign up (with test email)
     const testEmail = `test-${Date.now()}@example.com`;
-    const testPassword = 'TestPassword123!';
+    const testPassword = process.env.TEST_PASSWORD || 'TestPassword123!';
     
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: testEmail,
@@ -196,7 +196,7 @@ async function testFunctions(supabase) {
     // This will fail for regular users, which is expected
     const { data: functionTest, error: functionError } = await supabase
       .rpc('add_wings_to_user', {
-        user_id_param: '00000000-0000-0000-0000-000000000000',
+        user_id_param: process.env.TEST_USER_ID || '00000000-0000-0000-0000-000000000000',
         wings_amount: 10,
         activity_type_param: 'test',
         description_param: 'Test wings addition'

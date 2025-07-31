@@ -225,6 +225,9 @@ const LoginScreen = () => {
     setError('');
     
     try {
+      // Get the correct base URL
+      const baseUrl = process.env.REACT_APP_BASE_URL || window.location.origin;
+      
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -233,7 +236,9 @@ const LoginScreen = () => {
             username: formData.username,
             full_name: formData.username,
             referral_code: referralCode || null
-          }
+          },
+          // Add the redirect URL to fix localhost issue
+          emailRedirectTo: `${baseUrl}/auth/callback`
         }
       });
 

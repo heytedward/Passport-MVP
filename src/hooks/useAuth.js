@@ -29,8 +29,10 @@ export const AuthProvider = ({ children }) => {
             .eq('id', session.user.id)
             .single();
 
-          if (profileError) throw profileError;
-          setProfile(userProfile);
+          if (profileError && profileError.code !== 'PGRST116') {
+            console.error('Profile error:', profileError);
+          }
+          setProfile(userProfile || null);
         }
       } catch (error) {
         console.error('Error fetching session:', error);
@@ -71,8 +73,10 @@ export const AuthProvider = ({ children }) => {
                 .eq('id', session.user.id)
                 .single();
 
-              if (profileError) throw profileError;
-              setProfile(userProfile);
+              if (profileError && profileError.code !== 'PGRST116') {
+                console.error('Profile error:', profileError);
+              }
+              setProfile(userProfile || null);
             } else {
               setProfile(null);
             }
@@ -129,12 +133,30 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refreshProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+      setProfile(userProfile);
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    }
+  };
+
   const value = {
     user,
     profile,
     loading,
     isAdmin: profile?.role === 'admin',
     signOut,
+    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

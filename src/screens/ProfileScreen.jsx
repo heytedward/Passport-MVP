@@ -687,7 +687,7 @@ function ProfileScreen() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, profile: authProfile } = useAuth();
   const { 
     referralCode, 
     referralStats, 
@@ -706,102 +706,33 @@ function ProfileScreen() {
   const theme = useTheme();
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (user) {
-        try {
-          // Fetch user profile from Supabase
-          const supabase = createClient(
-            process.env.REACT_APP_SUPABASE_URL,
-            process.env.REACT_APP_SUPABASE_ANON_KEY
-          );
-          
-          const { data: userProfile, error } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-
-          if (error && error.code !== 'PGRST116') {
-            // Real error (not just "not found")
-            console.error('Error fetching profile:', error);
-          }
-
-          if (userProfile) {
-            setProfile({
-              name: userProfile.username || user.user_metadata?.username || user.email?.split('@')[0],
-              email: user.email,
-              avatar: userProfile.avatar_url || null,
-              joinDate: new Date(user.created_at).toLocaleDateString(),
-              totalWings: userProfile.wings_balance || 0,
-              level: Math.floor((userProfile.wings_balance || 0) / 100) + 1,
-              achievements: 0,
-              items: 0
-            });
-          } else {
-            // Fallback if no profile found
-            setProfile({
-              name: user.user_metadata?.username || user.email?.split('@')[0] || 'User',
-              email: user.email,
-              avatar: null,
-              joinDate: new Date(user.created_at).toLocaleDateString(),
-              totalWings: 0,
-              level: 1,
-              achievements: 0,
-              items: 0
-            });
-          }
-        } catch (error) {
-          console.error('Error fetching profile:', error);
-          // Fallback profile
-          setProfile({
-            name: user.user_metadata?.username || user.email?.split('@')[0] || 'User',
-            email: user.email,
-            avatar: null,
-            joinDate: new Date(user.created_at).toLocaleDateString(),
-            totalWings: 0,
-            level: 1,
-            achievements: 0,
-            items: 0
-          });
-        }
-      }
+    if (user && authProfile) {
+      setProfile({
+        name: authProfile.username || user.user_metadata?.username || user.email?.split('@')[0],
+        email: user.email,
+        avatar: authProfile.avatar_url || null,
+        joinDate: new Date(user.created_at).toLocaleDateString(),
+        totalWings: authProfile.wings_balance || 0,
+        level: Math.floor((authProfile.wings_balance || 0) / 100) + 1,
+        achievements: 0,
+        items: 0
+      });
       setLoading(false);
-    };
-
-    fetchProfile();
-
-    // Real-time subscriptions temporarily disabled due to React Strict Mode conflicts
-    // Will re-enable with proper singleton pattern later
-    // 
-    // if (user) {
-    //   const supabase = createClient(
-    //     process.env.REACT_APP_SUPABASE_URL,
-    //     process.env.REACT_APP_SUPABASE_ANON_KEY
-    //   );
-
-    //   const channelName = `profile_updates_${user.id}`;
-    //   const subscription = supabase
-    //     .channel(channelName)
-    //     .on('postgres_changes', {
-    //       event: 'UPDATE',
-    //       schema: 'public',
-    //       table: 'user_profiles',
-    //       filter: `id=eq.${user.id}`
-    //     }, (payload) => {
-    //       console.log('Profile updated via real-time (Profile):', payload);
-    //       setProfile(prev => prev ? {
-    //         ...prev,
-    //         totalWings: payload.new.wings_balance || 0,
-    //         level: Math.floor((payload.new.wings_balance || 0) / 100) + 1,
-    //       } : prev);
-    //     })
-    //     .subscribe();
-
-    //   return () => {
-    //     subscription.unsubscribe();
-    //   };
-    // }
-  }, [user]);
+    } else if (user) {
+      // Fallback if no profile found
+      setProfile({
+        name: user.user_metadata?.username || user.email?.split('@')[0] || 'User',
+        email: user.email,
+        avatar: null,
+        joinDate: new Date(user.created_at).toLocaleDateString(),
+        totalWings: 0,
+        level: 1,
+        achievements: 0,
+        items: 0
+      });
+      setLoading(false);
+    }
+  }, [user, authProfile]);
 
   const balance = 0;
   const transactions = [

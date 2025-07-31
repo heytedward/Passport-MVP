@@ -22,6 +22,7 @@ import QuestsScreen from './screens/QuestsScreen';
 import LoginScreen from './screens/LoginScreen';
 import AdminDashboard from './screens/AdminDashboard';
 import CircularQRGenerator from './components/CircularQRGenerator';
+import AuthCallback from './components/AuthCallback';
 
 import NavBar from './components/NavBar';
 
@@ -86,6 +87,7 @@ function App() {
               <Route path="/join/:referralCode" element={<LoginScreen />} />
               <Route path="/login" element={<LoginScreen />} />
               <Route path="/welcome" element={<WelcomeScreen />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               
               {/* Protected routes - require authentication */}
               <Route element={<ProtectedRoute />}>

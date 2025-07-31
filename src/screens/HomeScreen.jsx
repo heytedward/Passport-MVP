@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../hooks/useAuth';
 import { useStamps } from '../hooks/useStamps';
@@ -237,6 +237,27 @@ const WingsIcon = styled.span`
   font-size: 1.1rem;
 `;
 
+const SuccessMessage = styled.div`
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: white;
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-weight: 600;
+  z-index: 1000;
+  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3);
+  animation: slideIn 0.3s ease-out;
+  font-family: 'Outfit', sans-serif;
+  
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+`;
+
 const CardRow = styled.div`
   padding: 0 1.2rem;
   margin-bottom: 1.2rem;
@@ -439,13 +460,27 @@ const ProgressFill = styled.div`
 
 function HomeScreen() {
   const [showDailiesModal, setShowDailiesModal] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { awardPassportStamp, hasStamp } = useStamps();
   const { quests, loading: questsLoading } = useQuests();
 
   // Use the weekly wings hook
   const { weeklyStats, loading, error, getWeeklyProgressText, refreshStats } = useWeeklyWings(user?.id);
+
+  // Handle success messages from auth callback
+  useEffect(() => {
+    if (location.state?.message) {
+      setShowSuccess(location.state.message);
+      // Clear the message from history
+      window.history.replaceState({}, document.title);
+      
+      // Hide success message after 5 seconds
+      setTimeout(() => setShowSuccess(false), 5000);
+    }
+  }, [location]);
 
   // Award passport stamp on first visit
   useEffect(() => {
@@ -481,6 +516,11 @@ function HomeScreen() {
 
   return (
     <Container>
+      {showSuccess && (
+        <SuccessMessage>
+          {showSuccess}
+        </SuccessMessage>
+      )}
       <Header>
         <Welcome>Welcome back, {user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Collector'}</Welcome>
         <Subtext>
