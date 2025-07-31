@@ -337,16 +337,30 @@ const SettingsScreen = ({
               <SettingRow>
                 <Label>Profile Picture</Label>
                 <AvatarUpload
-                  userId={user?.id}
-                  currentAvatarUrl={avatar}
-                  onAvatarUpdate={async (newAvatarUrl) => {
-                    setAvatar(newAvatarUrl);
-                    // Refresh the profile to ensure consistency
-                    await refreshProfile();
-                  }}
-                  size={80}
-                  showButton={true}
-                />
+  userId={user?.id}
+  currentAvatarUrl={avatar}
+  onAvatarUpdate={async (newAvatarUrl) => {
+    console.log('🔄 Avatar updated, syncing state...', newAvatarUrl);
+    
+    // Update local state immediately
+    setAvatar(newAvatarUrl);
+    
+    // Refresh the global profile state
+    try {
+      await refreshProfile();
+      console.log('✅ Profile refreshed successfully');
+    } catch (error) {
+      console.error('❌ Failed to refresh profile:', error);
+    }
+    
+    // Force a small delay to ensure state propagation
+    setTimeout(() => {
+      console.log('🔄 State sync complete');
+    }, 500);
+  }}
+  size={80}
+  showButton={true}
+/>
               </SettingRow>
               <SettingRow>
                 <Label htmlFor="displayName">
