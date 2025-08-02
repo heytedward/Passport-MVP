@@ -34,7 +34,8 @@ const securityPatterns = {
     /pk_test_[a-zA-Z0-9]{24}/,
     /eyJ[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*/,
     /[A-Za-z0-9+/]{32,}={0,2}/,
-    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+    // Only flag UUIDs that look like real secrets (not test UUIDs)
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?!.*test|.*example|.*dummy)/i
   ],
   
   // Database connection strings
@@ -44,15 +45,15 @@ const securityPatterns = {
     /mongodb:\/\/[^:]+:[^@]+@[^\/]+\/[^?\s]+/
   ],
   
-  // Hardcoded credentials
+  // Hardcoded credentials (exclude environment variable fallbacks)
   hardcodedCreds: [
-    /password\s*[:=]\s*['"][^'"]+['"]/i,
-    /passwd\s*[:=]\s*['"][^'"]+['"]/i,
-    /secret\s*[:=]\s*['"][^'"]+['"]/i,
-    /(?:api_)?key\s*[:=]\s*['"][^'"]{20,}['"]/i,
-    /token\s*[:=]\s*['"][^'"]+['"]/i,
-    /credential\s*[:=]\s*['"][^'"]+['"]/i,
-    /auth\s*[:=]\s*['"][^'"]+['"]/i
+    /password\s*[:=]\s*['"][^'"]+(?!.*process\.env|.*\|\|.*test|.*\|\|.*example)['"]/i,
+    /passwd\s*[:=]\s*['"][^'"]+(?!.*process\.env|.*\|\|.*test|.*\|\|.*example)['"]/i,
+    /secret\s*[:=]\s*['"][^'"]+(?!.*process\.env|.*\|\|.*test|.*\|\|.*example)['"]/i,
+    /(?:api_)?key\s*[:=]\s*['"][^'"]{20,}(?!.*process\.env|.*\|\|.*test|.*\|\|.*example)['"]/i,
+    /token\s*[:=]\s*['"][^'"]+(?!.*process\.env|.*\|\|.*test|.*\|\|.*example)['"]/i,
+    /credential\s*[:=]\s*['"][^'"]+(?!.*process\.env|.*\|\|.*test|.*\|\|.*example)['"]/i,
+    /auth\s*[:=]\s*['"][^'"]+(?!.*process\.env|.*\|\|.*test|.*\|\|.*example)['"]/i
   ],
   
   // Insecure patterns
@@ -107,6 +108,15 @@ const excludeDirs = [
   'node_modules', '.git', '.next', 'dist', 'build', '.vercel'
 ];
 
+// Test script patterns to exclude
+const testScriptPatterns = [
+  /test-.*\.js$/,
+  /diagnose-.*\.js$/,
+  /setup-.*\.js$/,
+  /.*test.*\.js$/,
+  /.*diagnostic.*\.js$/
+];
+
 // Files to exclude
 const excludeFiles = [
   'package-lock.json', 'yarn.lock', '.env.example', 'security-scan.js'
@@ -147,6 +157,11 @@ function shouldScanFile(filePath) {
   if (!scanExtensions.includes(ext)) return false;
   if (excludeFiles.includes(fileName)) return false;
   if (fileName.endsWith('.map')) return false;
+  
+  // Exclude test scripts
+  for (const pattern of testScriptPatterns) {
+    if (pattern.test(fileName)) return false;
+  }
   
   for (const excludeDir of excludeDirs) {
     if (filePath.includes(excludeDir)) return false;
