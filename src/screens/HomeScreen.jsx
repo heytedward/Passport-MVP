@@ -7,6 +7,7 @@ import { useStamps } from '../hooks/useStamps';
 import { useQuests } from '../hooks/useQuests';
 import DailiesModal from '../components/DailiesModal';
 import LiveCountdown from '../components/LiveCountdown';
+import NavBar from '../components/NavBar';
 
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
@@ -672,6 +673,9 @@ function HomeScreen() {
       }}>
         Beta v0.1.0
       </div>
+      
+      {/* Navigation Bar */}
+      <NavBar />
     </Container>
   );
 }

@@ -32,7 +32,42 @@ export const AuthProvider = ({ children }) => {
           if (profileError && profileError.code !== 'PGRST116') {
             console.error('Profile error:', profileError);
           }
-          setProfile(userProfile || null);
+          
+          // If no profile exists, create one
+          if (!userProfile && session.user) {
+            console.log('🦋 Creating user profile for:', session.user.email);
+            console.log('🦋 User metadata:', session.user.user_metadata);
+            try {
+              const { data: newProfile, error: createError } = await supabase
+                .from('user_profiles')
+                .insert({
+                  id: session.user.id,
+                  email: session.user.email,
+                  username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user',
+                  full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'User',
+                  wings_balance: 0,
+                  current_week_wings: 0,
+                  week_start_date: new Date().toISOString(),
+                  role: 'user',
+                  clothing_size: session.user.user_metadata?.clothing_size || null
+                })
+                .select()
+                .single();
+
+              if (createError) {
+                console.error('Error creating profile:', createError);
+                setProfile(null);
+              } else {
+                console.log('✅ User profile created:', newProfile);
+                setProfile(newProfile);
+              }
+            } catch (createErr) {
+              console.error('Error creating profile:', createErr);
+              setProfile(null);
+            }
+          } else {
+            setProfile(userProfile || null);
+          }
         }
       } catch (error) {
         console.error('Error fetching session:', error);
@@ -76,7 +111,41 @@ export const AuthProvider = ({ children }) => {
               if (profileError && profileError.code !== 'PGRST116') {
                 console.error('Profile error:', profileError);
               }
-              setProfile(userProfile || null);
+              
+              // If no profile exists, create one
+              if (!userProfile && session.user) {
+                console.log('🦋 Creating user profile for:', session.user.email);
+                try {
+                  const { data: newProfile, error: createError } = await supabase
+                    .from('user_profiles')
+                    .insert({
+                      id: session.user.id,
+                      email: session.user.email,
+                      username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user',
+                      full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'User',
+                      wings_balance: 0,
+                      current_week_wings: 0,
+                      week_start_date: new Date().toISOString(),
+                      role: 'user',
+                      clothing_size: session.user.user_metadata?.clothing_size || null
+                    })
+                    .select()
+                    .single();
+
+                  if (createError) {
+                    console.error('Error creating profile:', createError);
+                    setProfile(null);
+                  } else {
+                    console.log('✅ User profile created:', newProfile);
+                    setProfile(newProfile);
+                  }
+                } catch (createErr) {
+                  console.error('Error creating profile:', createErr);
+                  setProfile(null);
+                }
+              } else {
+                setProfile(userProfile || null);
+              }
             } else {
               setProfile(null);
             }

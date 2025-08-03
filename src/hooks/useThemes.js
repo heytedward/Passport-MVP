@@ -2,66 +2,47 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { useAuth } from './useAuth';
 
-// Theme mapping from database reward IDs to theme keys
-const THEME_MAPPING = {
-  'theme_frequency_pulse': 'frequencyPulse',
-  'theme_solar_shine': 'solarShine', 
-  'theme_echo_glass': 'echoGlass',
-  'theme_retro_frame': 'retroFrame',
-  'theme_night_scan': 'nightScan'
-};
-
-// Theme unlock requirements
 const THEME_REQUIREMENTS = {
   frequencyPulse: {
     name: 'Frequency Pulse',
     description: 'Default theme - always available',
     requirements: [
       { id: 'signup', text: 'Sign up for Monarch Passport', completed: true }
-    ],
-    rewardId: 'theme_frequency_pulse'
+    ]
   },
   solarShine: {
     name: 'Solar Shine',
     description: 'Unlock by scanning your first QR code',
     requirements: [
-      { id: 'signup', text: 'Sign up for Monarch Passport', completed: true },
-      { id: 'first_scan', text: 'Scan your first QR code', completed: false }
-    ],
-    rewardId: 'theme_solar_shine'
+      { id: 'first_scan', text: 'Scan your first QR code', target: 1 }
+    ]
   },
   echoGlass: {
     name: 'Echo Glass',
     description: 'Unlock by completing 3 quests',
     requirements: [
-      { id: 'signup', text: 'Sign up for Monarch Passport', completed: true },
-      { id: 'quests', text: 'Complete 3 quests', completed: false, target: 3 }
-    ],
-    rewardId: 'theme_echo_glass'
+      { id: 'quests', text: 'Complete 3 quests', target: 3 }
+    ]
   },
   retroFrame: {
     name: 'Retro Frame',
     description: 'Unlock by collecting 10 items',
     requirements: [
-      { id: 'signup', text: 'Sign up for Monarch Passport', completed: true },
-      { id: 'items', text: 'Collect 10 items', completed: false, target: 10 }
-    ],
-    rewardId: 'theme_retro_frame'
+      { id: 'items', text: 'Collect 10 items', target: 10 }
+    ]
   },
   nightScan: {
     name: 'Night Scan',
     description: 'Unlock by earning 500 WNGS',
     requirements: [
-      { id: 'signup', text: 'Sign up for Monarch Passport', completed: true },
-      { id: 'wings', text: 'Earn 500 WNGS', completed: false, target: 500 }
-    ],
-    rewardId: 'theme_night_scan'
+      { id: 'wings', text: 'Earn 500 WNGS', target: 500 }
+    ]
   }
 };
 
 export const useThemes = () => {
   const { user } = useAuth();
-  const [ownedThemes, setOwnedThemes] = useState(['frequencyPulse']); // Default theme always owned
+  const [ownedThemes, setOwnedThemes] = useState(['frequencyPulse']);
   const [equippedTheme, setEquippedTheme] = useState('frequencyPulse');
   const [loading, setLoading] = useState(true);
   const [userProgress, setUserProgress] = useState({
@@ -71,152 +52,149 @@ export const useThemes = () => {
     totalWings: 0
   });
 
-  // Load user's owned and equipped themes
+  // Load user themes and progress from database
   useEffect(() => {
     if (!user) {
       setLoading(false);
       return;
     }
-
+    
+    console.log('🦋 useThemes useEffect triggered for user:', user.id);
     loadUserThemes();
+    
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn('🦋 Themes loading timeout - forcing completion');
+        setLoading(false);
+      }
+    }, 5000);
+    
+    return () => clearTimeout(timeoutId);
   }, [user]);
 
   const loadUserThemes = async () => {
     try {
+      console.log('🦋 Loading themes for user:', user.id);
       setLoading(true);
-
-      // Get user progress for unlock requirements
-      const [closetData, questData, profileData] = await Promise.all([
-        // Get owned theme rewards and total items
-        supabase
-          .from('user_closet')
-          .select('reward_id, earned_via')
-          .eq('user_id', user.id),
-          
-        // Get completed quests
-        supabase
-          .from('user_quest_progress')
-          .select('status')
-          .eq('user_id', user.id)
-          .eq('status', 'completed'),
-          
-        // Get user profile for WNGS balance
-        supabase
-          .from('user_profiles')
-          .select('wings_balance')
-          .eq('id', user.id)
-          .single()
-      ]);
-
-      // Calculate user progress
-      const totalScans = closetData.data?.filter(item => item.earned_via === 'qr_scan').length || 0;
-      const totalQuests = questData.data?.length || 0;
-      const totalItems = closetData.data?.length || 0;
-      const totalWings = profileData.data?.wings_balance || 0;
-
-      setUserProgress({
-        totalScans,
-        totalQuests,
-        totalItems,
-        totalWings
-      });
-
-      // Get equipped theme - with better error handling
-      let equippedThemeKey = process.env.REACT_APP_DEFAULT_THEME || 'frequencyPulse'; // Default fallback
       
-      try {
-        const { data: equippedData, error: equippedError } = await supabase
-          .from('user_equipped_theme')
-          .select('theme_key')
-          .eq('user_id', user.id)
-          .single();
+      // Query all theme and progress columns
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('themes_unlocked, equipped_theme, total_scans, total_quests_completed, total_items_collected, wings_balance')
+        .eq('id', user.id)
+        .single();
 
-        if (equippedError) {
-          console.log('No equipped theme found in database, using default:', equippedError.message);
-        } else if (equippedData?.theme_key) {
-          equippedThemeKey = equippedData.theme_key;
-          console.log('Loaded equipped theme from database:', equippedThemeKey);
-        }
-      } catch (dbError) {
-        console.log('Database error loading equipped theme, using default:', dbError.message);
+      console.log('🦋 Profile query result:', { profile, error });
+
+      if (error) {
+        console.log('🦋 Profile error, using defaults:', error);
+        // If profile doesn't exist, use default values
+        setOwnedThemes(['frequencyPulse']);
+        setEquippedTheme('frequencyPulse');
+        setUserProgress({
+          totalScans: 0,
+          totalQuests: 0,
+          totalItems: 0,
+          totalWings: 0
+        });
+      } else {
+        console.log('🦋 Profile found, using data:', profile);
+        // Use actual data from database
+        setOwnedThemes(profile.themes_unlocked || ['frequencyPulse']);
+        setEquippedTheme(profile.equipped_theme || 'frequencyPulse');
+        setUserProgress({
+          totalScans: profile.total_scans || 0,
+          totalQuests: profile.total_quests_completed || 0,
+          totalItems: profile.total_items_collected || 0,
+          totalWings: profile.wings_balance || 0
+        });
       }
 
-      // TEMPORARY: Unlock all themes for testing
-      const owned = ['frequencyPulse', 'solarShine', 'echoGlass', 'retroFrame', 'nightScan'];
-
-      setOwnedThemes(owned);
-      setEquippedTheme(equippedThemeKey);
-      
-      console.log('Theme system initialized:', {
-        ownedThemes: owned,
-        equippedTheme: equippedThemeKey,
-        userProgress: { totalScans, totalQuests, totalItems, totalWings }
-      });
     } catch (error) {
-      console.error('Error loading themes:', error);
-      // Set defaults on error
+      console.error('🦋 Error loading user themes:', error);
+      // Use default values on error
       setOwnedThemes(['frequencyPulse']);
       setEquippedTheme('frequencyPulse');
+      setUserProgress({
+        totalScans: 0,
+        totalQuests: 0,
+        totalItems: 0,
+        totalWings: 0
+      });
     } finally {
+      console.log('🦋 Setting loading to false');
       setLoading(false);
     }
   };
 
+  // Equip a theme
   const equipTheme = async (themeKey) => {
-    if (!user || !ownedThemes.includes(themeKey)) {
-      console.log('Cannot equip theme:', { user: !!user, themeKey, ownedThemes });
-      return false;
-    }
+    if (!user || !ownedThemes.includes(themeKey)) return false;
 
     try {
-      console.log('Equipping theme:', themeKey);
-      
-      // Update local state immediately for better UX
-      setEquippedTheme(themeKey);
-      
-      // Update or insert equipped theme in database
       const { error } = await supabase
-        .from('user_equipped_theme')
-        .upsert({
-          user_id: user.id,
-          theme_key: themeKey,
-          updated_at: new Date().toISOString()
-        });
+        .from('user_profiles')
+        .update({ equipped_theme: themeKey })
+        .eq('id', user.id);
 
-      if (error) {
-        console.error('Database error equipping theme:', error);
-        // Don't revert local state - let user see the change
-        // The theme will persist until page refresh
-        return true; // Still return true for UX
-      }
+      if (error) throw error;
 
-      console.log('Theme equipped successfully:', themeKey);
+      setEquippedTheme(themeKey);
       return true;
     } catch (error) {
       console.error('Error equipping theme:', error);
-      // Keep the local state change for better UX
-      return true;
+      return false;
     }
   };
 
+  // Check if theme is unlocked
   const checkThemeOwnership = (themeKey) => {
     return ownedThemes.includes(themeKey);
   };
 
+  // Get theme requirements with progress
   const getThemeRequirements = (themeKey) => {
-    const theme = THEME_REQUIREMENTS[themeKey];
-    if (!theme) return null;
+    const themeReq = THEME_REQUIREMENTS[themeKey];
+    if (!themeReq) return null;
 
-    // TEMPORARY: Show all themes as unlocked for testing
-    const updatedRequirements = theme.requirements.map(req => ({
-      ...req,
-      completed: true
-    }));
+    const requirements = themeReq.requirements.map(req => {
+      let completed = false;
+      let progress = 0;
+
+      switch (req.id) {
+        case 'signup':
+          completed = true;
+          break;
+        case 'first_scan':
+          progress = userProgress.totalScans;
+          completed = userProgress.totalScans >= (req.target || 1);
+          break;
+        case 'quests':
+          progress = userProgress.totalQuests;
+          completed = userProgress.totalQuests >= (req.target || 0);
+          break;
+        case 'items':
+          progress = userProgress.totalItems;
+          completed = userProgress.totalItems >= (req.target || 0);
+          break;
+        case 'wings':
+          progress = userProgress.totalWings;
+          completed = userProgress.totalWings >= (req.target || 0);
+          break;
+      }
+
+      return {
+        ...req,
+        completed,
+        progress,
+        progressText: req.target ? `${progress}/${req.target}` : null
+      };
+    });
 
     return {
-      ...theme,
-      requirements: updatedRequirements,
-      isUnlocked: true
+      ...themeReq,
+      requirements
     };
   };
 
@@ -228,6 +206,6 @@ export const useThemes = () => {
     equipTheme,
     checkThemeOwnership,
     getThemeRequirements,
-    refreshThemes: loadUserThemes
+    loadUserThemes
   };
 }; 

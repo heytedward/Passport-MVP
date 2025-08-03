@@ -426,11 +426,8 @@ const LimitedEditionRewardModal = ({
   const {
     name,
     description,
-    rarity,
-    category,
     limitedEdition,
-    images,
-    shopifyPrice
+    images
   } = reward;
 
   const {
@@ -457,7 +454,6 @@ const LimitedEditionRewardModal = ({
   // Calculate collection value
   const baseWingsValue = limitedEdition?.baseWings || 100;
   const bonusWings = limitedEdition?.bonusWings || 0;
-  const totalWings = baseWingsValue + bonusWings;
 
   // Format claimed date
   const formatClaimedDate = (dateString) => {

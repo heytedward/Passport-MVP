@@ -217,7 +217,7 @@ export function withRateLimit(WrappedComponent, rateLimitType, identifierGetter)
       return action(...args);
     };
     
-    return <WrappedComponent {...props} rateLimitedAction={handleAction} />;
+    return WrappedComponent({ ...props, rateLimitedAction: handleAction });
   };
 }
 

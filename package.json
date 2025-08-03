@@ -24,6 +24,8 @@
     "start": "npm run validate-env && react-scripts start",
     "start:https": "npm run validate-env && HTTPS=true react-scripts start",
     "build": "npm run validate-env && react-scripts build",
+    "build:analyze": "npm run validate-env && GENERATE_SOURCEMAP=false react-scripts build && npx webpack-bundle-analyzer build/static/js/*.js",
+    "build:optimized": "npm run validate-env && GENERATE_SOURCEMAP=false react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "test:supabase": "node scripts/test-supabase-connection.js",
@@ -39,7 +41,13 @@
     "security:backup": "node scripts/backup-secrets.js",
     "precommit": "npm run validate-env && npm run security:scan",
     "postinstall": "npm run validate-env",
-    "deploy:secure": "npm run security:test && npm run build"
+    "deploy:secure": "npm run security:test && npm run build",
+    "bundle:analyze": "npm run build:analyze",
+    "bundle:size": "npm run build:optimized && npx size-limit",
+    "optimize:images": "node scripts/optimize-images.js",
+    "optimize:code": "npm run lint:fix && npm run remove-unused",
+    "lint:fix": "eslint src --fix",
+    "remove-unused": "npx unimported"
   },
   "eslintConfig": {
     "extends": [
@@ -60,14 +68,28 @@
     ]
   },
   "devDependencies": {
+    "@size-limit/preset-app": "^11.2.0",
     "dotenv-safe": "^8.2.0",
     "husky": "^8.0.3",
-    "lint-staged": "^15.2.0"
+    "lint-staged": "^15.2.0",
+    "size-limit": "^11.2.0",
+    "unimported": "^1.31.0",
+    "webpack-bundle-analyzer": "^4.10.2"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
       "npm run validate-env",
       "npm run security:scan"
     ]
-  }
+  },
+  "size-limit": [
+    {
+      "path": "build/static/js/main.*.js",
+      "limit": "100 kB"
+    },
+    {
+      "path": "build/static/js/*.js",
+      "limit": "250 kB"
+    }
+  ]
 }

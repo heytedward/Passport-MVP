@@ -90,6 +90,35 @@ const Input = styled.input`
   }
 `;
 
+const Select = styled.select`
+  padding: 12px 16px;
+  border: 3px solid rgba(255, 215, 0, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 0 8px 0 rgba(255,215,0,0.1),
+    0 0 16px 0 rgba(255,215,0,0.05),
+    inset 0 1px 0 rgba(255,215,0,0.05);
+  
+  &:focus {
+    outline: none;
+    border: 3px solid #FFD700;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 
+      0 0 16px 0 rgba(255,215,0,0.25),
+      0 0 32px 0 rgba(255,215,0,0.12),
+      inset 0 1px 0 rgba(255,215,0,0.15);
+  }
+  
+  option {
+    background: #1a1a1a;
+    color: white;
+  }
+`;
+
 const ToggleButton = styled.button`
   background: none;
   border: none;
@@ -134,7 +163,8 @@ const LoginScreen = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    username: ''
+    username: '',
+    clothingSize: ''
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -179,6 +209,10 @@ const LoginScreen = () => {
     if (isSignUp) {
       if (!formData.username) {
         setError('Username is required');
+        return false;
+      }
+      if (!formData.clothingSize) {
+        setError('Please select your clothing size');
         return false;
       }
       if (formData.password !== formData.confirmPassword) {
@@ -235,6 +269,7 @@ const LoginScreen = () => {
           data: {
             username: formData.username,
             full_name: formData.username,
+            clothing_size: formData.clothingSize,
             referral_code: referralCode || null
           },
           // Add the redirect URL to fix localhost issue
@@ -353,6 +388,25 @@ const LoginScreen = () => {
                     ✓ You'll earn 25 WINGS for joining + 25 more for your first scan!
                   </div>
                 )}
+              </InputGroup>
+            )}
+
+            {isSignUp && (
+              <InputGroup>
+                <Label>Clothing Size</Label>
+                <Select
+                  name="clothingSize"
+                  value={formData.clothingSize}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Select your size</option>
+                  <option value="S">S</option>
+                  <option value="M">M</option>
+                  <option value="L">L</option>
+                  <option value="XL">XL</option>
+                  <option value="2XL">2XL</option>
+                  <option value="3XL">3XL</option>
+                </Select>
               </InputGroup>
             )}
             

@@ -34,10 +34,7 @@ const NavContainer = styled.div`
   padding: 0 20px;
 `;
 
-const ripple = keyframes`
-  0% { transform: scale(0); opacity: 1; }
-  100% { transform: scale(2); opacity: 0; }
-`;
+
 
 const NavItem = styled(Link)`
   display: flex;
@@ -133,11 +130,7 @@ const ScanButtonContainer = styled.div`
   justify-content: center;
 `;
 
-const scanPulse = keyframes`
-  0% { box-shadow: 0 0 0 0 rgba(127, 63, 191, 0.4); }
-  70% { box-shadow: 0 0 0 12px rgba(127, 63, 191, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(127, 63, 191, 0); }
-`;
+
 
 const ScanButton = styled(Link)`
   display: flex;
@@ -204,7 +197,7 @@ const NavBar = () => {
   ];
   
   const getIcon = (iconName, isActive) => {
-    const color = isActive ? '#7F3FBF' : 'rgba(255, 255, 255, 0.7)';
+    const color = isActive ? '#7F3FBF' : 'rgba(255, 255, 250, 0.7)';
     
     switch (iconName) {
       case 'Home':

@@ -19,6 +19,30 @@ const Container = styled.div`
   align-items: center;
   justify-content: center;
   padding: 48px 8px 120px 8px;
+  position: relative;
+`;
+
+const BackButton = styled.button`
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: linear-gradient(135deg, #FFB000 0%, #FF9F1C 100%);
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  z-index: 100;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 176, 0, 0.3);
+  }
 `;
 
 const Accordion = styled.div`
@@ -319,10 +343,40 @@ const SettingsScreen = ({
     navigate('/login');
   };
 
+  const unlockAllThemes = async () => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          themes_unlocked: ['frequencyPulse', 'solarShine', 'echoGlass', 'retroFrame', 'nightScan'],
+          equipped_theme: 'frequencyPulse',
+          total_scans: 50,
+          total_quests_completed: 20,
+          total_items_collected: 25,
+          wings_balance: 1500
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Error unlocking themes:', error);
+        alert('Error unlocking themes: ' + error.message);
+      } else {
+        alert('✅ All themes unlocked! Go to /closet to see them.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error: ' + error.message);
+    }
+  };
 
 
   return (
     <Container>
+      <BackButton onClick={() => navigate('/profile')}>
+        ← Back to Profile
+      </BackButton>
       <Accordion>
         <AccordionSection>
           <AccordionHeader
@@ -337,16 +391,30 @@ const SettingsScreen = ({
               <SettingRow>
                 <Label>Profile Picture</Label>
                 <AvatarUpload
-                  userId={user?.id}
-                  currentAvatarUrl={avatar}
-                  onAvatarUpdate={async (newAvatarUrl) => {
-                    setAvatar(newAvatarUrl);
-                    // Refresh the profile to ensure consistency
-                    await refreshProfile();
-                  }}
-                  size={80}
-                  showButton={true}
-                />
+  userId={user?.id}
+  currentAvatarUrl={avatar}
+  onAvatarUpdate={async (newAvatarUrl) => {
+    console.log('🔄 Avatar updated, syncing state...', newAvatarUrl);
+    
+    // Update local state immediately
+    setAvatar(newAvatarUrl);
+    
+    // Refresh the global profile state
+    try {
+      await refreshProfile();
+      console.log('✅ Profile refreshed successfully');
+    } catch (error) {
+      console.error('❌ Failed to refresh profile:', error);
+    }
+    
+    // Force a small delay to ensure state propagation
+    setTimeout(() => {
+      console.log('🔄 State sync complete');
+    }, 500);
+  }}
+  size={80}
+  showButton={true}
+/>
               </SettingRow>
               <SettingRow>
                 <Label htmlFor="displayName">
@@ -463,6 +531,32 @@ const SettingsScreen = ({
                   <div style={{ marginBottom: '1rem', color: '#fff', fontSize: '0.9rem' }}>
                     <strong>Logged in as:</strong> {user.email}
                   </div>
+                  
+                  {/* Theme Testing Section */}
+                  <div style={{ 
+                    marginBottom: '1rem', 
+                    padding: '1rem', 
+                    background: 'rgba(255, 176, 0, 0.1)', 
+                    border: '1px solid rgba(255, 176, 0, 0.3)', 
+                    borderRadius: '8px' 
+                  }}>
+                    <div style={{ marginBottom: '0.5rem', color: '#FFB000', fontWeight: 'bold' }}>
+                      🎨 Theme Testing
+                    </div>
+                    <Button
+                      onClick={unlockAllThemes}
+                      style={{ 
+                        width: '100%', 
+                        background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+                        border: 'none',
+                        color: '#fff',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      🎁 Unlock All Themes for Testing
+                    </Button>
+                  </div>
+                  
                   <Button
                     style={{ marginTop: 12, width: '100%', background: 'rgba(231, 76, 60, 0.2)', borderColor: 'rgba(231, 76, 60, 0.3)' }}
                     onClick={() => {

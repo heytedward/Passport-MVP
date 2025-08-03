@@ -1,19 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import styled from 'styled-components';
-import { createClient } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import GlassCard from '../components/GlassCard';
 import { useThemes } from '../hooks/useThemes';
+import { useCloset } from '../hooks/useCloset';
+import { useAuth } from '../hooks/useAuth';
 import { gradientThemes } from '../styles/theme';
-import LimitedEditionBadge from '../components/LimitedEditionBadge';
-import MintNumberDisplay from '../components/MintNumberDisplay';
-import ExclusivityIndicator from '../components/ExclusivityIndicator';
-import { useMonarchRewards } from '../hooks/useMonarchRewards';
+import NavBar from '../components/NavBar';
 
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
-);
+
 
 // Item details for the flip cards
 const itemBackDetails = {
@@ -53,201 +48,15 @@ const itemBackDetails = {
     location: "Papillon Studio",
     season: "Classic Collection"
   },
-  // "Monarch Badge": {
-  //   obtained: "Achievement Unlocked",
-  //   date: "March 20, 2025",
-  //   location: "Digital Achievement",
-  //   season: "Genesis Collection"
-  // },
-  // "VIP Pass": {
-  //   obtained: "Scanned QR at VIP Event",
-  //   date: "March 18, 2025",
-  //   location: "Papillon HQ",
-  //   season: "Spring 2025"
-  // },
+
   "Butterfly Wallpaper": {
     obtained: "Community Event Reward",
     date: "March 22, 2025",
     location: "Digital Drop",
     season: "Genesis Collection"
   },
-  // "Papillon Theme Song": {
-  //   obtained: "Exclusive Audio Release",
-  //   date: "March 20, 2025",
-  //   location: "Digital Release",
-  //   season: "Audio Collection"
-  // },
-  // "Golden Butterfly Sticker": {
-  //   obtained: "Achievement Milestone",
-  //   date: "March 18, 2025",
-  //   location: "Digital Reward",
-  //   season: "Sticker Pack Vol.1"
-  // },
-  // "3D Butterfly Model": {
-  //   obtained: "Special Event Drop",
-  //   date: "March 25, 2025",
-  //   location: "Digital Event",
-  //   season: "3D Collection"
-  // }
-};
 
-// Updated mock data - removed tokens category, added new digital categories
-const mockClosetItems = [
-  {
-    id: 1,
-    item_type: 'physical_item',
-    item_id: 'spring-jacket-001',
-    name: 'Spring Jacket',
-    rarity: 'rare',
-    category: 'jackets',
-    mint_number: 37,
-    wings_earned: 75,
-    earned_date: '2025-03-15',
-    earned_via: 'qr_scan'
-  },
-  {
-    id: 2,
-    item_type: 'physical_item',
-    item_id: 'gold-chain-001',
-    name: 'Gold Chain',
-    rarity: 'epic',
-    category: 'accessories',
-    mint_number: 3,
-    wings_earned: 150,
-    earned_date: '2025-03-12',
-    earned_via: 'qr_scan'
-  },
-  {
-    id: 3,
-    item_type: 'physical_item',
-    item_id: 'summer-hat-001',
-    name: 'Summer Hat',
-    rarity: 'common',
-    category: 'headwear',
-    mint_number: 21,
-    wings_earned: 15,
-    earned_date: '2025-03-10',
-    earned_via: 'qr_scan'
-  },
-  {
-    id: 4,
-    item_type: 'physical_item',
-    item_id: 'classic-hoodie-001',
-    name: 'Classic Hoodie',
-    rarity: 'rare',
-    category: 'tops',
-    mint_number: 89,
-    wings_earned: 75,
-    earned_date: '2025-03-08',
-    earned_via: 'qr_scan'
-  },
-  {
-    id: 5,
-    item_type: 'physical_item',
-    item_id: 'denim-jeans-001',
-    name: 'Denim Jeans',
-    rarity: 'rare',
-    category: 'bottoms',
-    mint_number: 156,
-    wings_earned: 75,
-    earned_date: '2025-03-05',
-    earned_via: 'qr_scan'
-  },
-  {
-    id: 6,
-    item_type: 'physical_item',
-    item_id: 'long-sleeve-tee-001',
-    name: 'Long Sleeve Tee',
-    rarity: 'common',
-    category: 'tops',
-    mint_number: 203,
-    wings_earned: 15,
-    earned_date: '2025-03-01',
-    earned_via: 'qr_scan'
-  },
-  // {
-  //   id: 7,
-  //   item_type: 'digital_collectible',
-  //   item_id: 'monarch-badge-001',
-  //   name: 'Monarch Badge',
-  //   rarity: 'legendary',
-  //   category: 'badges',
-  //   mint_number: 1,
-  //   wings_earned: 300,
-  //   earned_date: '2025-03-20',
-  //   earned_via: 'achievement'
-  // },
-  // {
-  //   id: 8,
-  //   item_type: 'digital_collectible',
-  //   item_id: 'vip-pass-001',
-  //   name: 'VIP Pass',
-  //   rarity: 'epic',
-  //   category: 'passes',
-  //   mint_number: 7,
-  //   wings_earned: 150,
-  //   earned_date: '2025-03-18',
-  //   earned_via: 'qr_scan'
-  // },
-  // NEW DIGITAL COLLECTIBLE CATEGORIES (removed tokens)
-  {
-    id: 9,
-    item_type: 'digital_collectible',
-    item_id: 'butterfly-wallpaper-001',
-    name: 'Butterfly Wallpaper',
-    rarity: 'epic',
-    category: 'wallpapers',
-    mint_number: 12,
-    wings_earned: 150,
-    earned_date: '2025-03-22',
-    earned_via: 'achievement',
-    file_type: 'image',
-    file_url: 'https://example.com/wallpaper.jpg'
-  },
-  // {
-  //   id: 10,
-  //   item_type: 'digital_collectible',
-  //   item_id: 'papillon-theme-song-001',
-  //   name: 'Papillon Theme Song',
-  //   rarity: 'rare',
-  //   category: 'audio_stickers',
-  //   mint_number: 45,
-  //   wings_earned: 35,
-  //   earned_date: '2025-03-20',
-  //   earned_via: 'community_event',
-  //   file_type: 'audio',
-  //   file_url: 'https://example.com/theme.mp3'
-  // },
-  // {
-  //   id: 11,
-  //   item_type: 'digital_collectible',
-  //   item_id: 'golden-butterfly-sticker-001',
-  //   name: 'Golden Butterfly Sticker',
-  //   rarity: 'legendary',
-  //   category: 'stickers',
-  //   mint_number: 5,
-  //   wings_earned: 60,
-  //   earned_date: '2025-03-18',
-  //   earned_via: 'milestone',
-  //   file_type: 'image',
-  //   file_url: 'https://example.com/sticker.png'
-  // },
-  // {
-  //   id: 12,
-  //   item_type: 'digital_collectible',
-  //   item_id: '3d-butterfly-001',
-  //   name: '3D Butterfly Model',
-  //   rarity: 'epic',
-  //   category: 'stickers',
-  //   mint_number: 15,
-  //   wings_earned: 50,
-  //   earned_date: '2025-03-25',
-  //   earned_via: 'special_event',
-  //   file_type: '3d_model',
-  //   file_url: 'https://example.com/3d-butterfly.glb',
-  //   preview_mp4: 'https://example.com/3d-butterfly-preview.mp4' // MP4 preview for 3D objects
-  // }
-];
+};
 
 // Theme unlock requirements
 const themeUnlockRequirements = {
@@ -579,24 +388,7 @@ const MintNumberBadge = styled.div`
   }
 `;
 
-const LimitedEditionIndicator = styled.div`
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: #FFB000;
-  color: black;
-  font-size: 0.6rem;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  
-  @media (max-width: 768px) {
-    font-size: 0.5rem;
-    padding: 1px 4px;
-  }
-`;
+
 
 // New styled component for MP4 preview
 const VideoPreview = styled.video`
@@ -1015,22 +807,6 @@ const ItemModal = ({ item, isOpen, onClose }) => {
     }
   };
 
-  // Helper function to get progress for requirements
-  const getProgressForRequirement = (req) => {
-    switch (req.id) {
-      case 'first_scan':
-        return userProgress.totalScans;
-      case 'quests':
-        return userProgress.totalQuests;
-      case 'items':
-        return userProgress.totalItems;
-      case 'wings':
-        return userProgress.totalWings;
-      default:
-        return 0;
-    }
-  };
-
   // Check if item has MP4 preview for 3D models
   const hasVideoPreview = item.preview_mp4 && item.file_type === '3d_model';
   
@@ -1088,12 +864,7 @@ const ItemModal = ({ item, isOpen, onClose }) => {
           <BackFace onClick={() => setIsFlipped(false)}>
             {item.category === 'themes' ? (
               <>
-                {console.log('Modal item:', { 
-                  name: item.name, 
-                  unlocked: item.unlocked, 
-                  equipped: item.equipped,
-                  requirements: item.requirements 
-                })}
+
                 <ModalTitle>Unlock Requirements</ModalTitle>
                 <ModalDetails>
                   <div style={{ textAlign: 'left', lineHeight: '2' }}>
@@ -1108,14 +879,14 @@ const ItemModal = ({ item, isOpen, onClose }) => {
                           {req.completed ? '✅' : '⭕'}
                         </span>
                         {req.text}
-                        {req.target && (
+                        {req.progressText && (
                           <span style={{ 
                             marginLeft: '8px', 
                             fontSize: '0.9rem', 
                             opacity: 0.7,
-                            color: req.completed ? '#10B981' : '#fff'
+                            color: req.completed ? '#10B981' : '#FFD700'
                           }}>
-                            ({getProgressForRequirement(req)}/{req.target})
+                            ({req.progressText})
                           </span>
                         )}
                       </div>
@@ -1177,109 +948,28 @@ const ItemModal = ({ item, isOpen, onClose }) => {
 };
 
 const ClosetScreen = () => {
-  const { ownedThemes, equippedTheme, equipTheme, checkThemeOwnership, getThemeRequirements, userProgress } = useThemes();
-  const { getRewardById, getLimitedEditionRewards } = useMonarchRewards();
-  const [mainFilter, setMainFilter] = useState('all'); // 'all', 'physical', 'digital', 'limited'
+  const { user, loading: authLoading } = useAuth();
+  const { equippedTheme, equipTheme, checkThemeOwnership, getThemeRequirements, userProgress, loading: themesLoading } = useThemes();
+  const { 
+    closetItems, 
+    loading: closetLoading, 
+    stats, 
+    refreshCloset,
+    isCacheValid 
+  } = useCloset();
+
+
+
+  const [mainFilter, setMainFilter] = useState('all');
   const [subFilter, setSubFilter] = useState('all');
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Get current user
-    const getUser = async () => {
-      try {
-        console.log('Getting current user...');
-        
-        // Add timeout for user auth check
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Auth timeout')), 3000)
-        );
-        
-        const authPromise = supabase.auth.getUser();
-        const { data: { user } } = await Promise.race([authPromise, timeoutPromise]);
-        
-        console.log('User auth result:', user ? 'Authenticated' : 'Not authenticated');
-        setUser(user);
-        
-        if (user) {
-          await loadUserItems(user.id);
-        } else {
-          // If no user, show empty state
-          console.log('No authenticated user, showing empty state');
-          setItems([]);
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('Error getting user:', error);
-        console.log('Auth error, showing empty state');
-        // On any error, show empty state
-        setItems([]);
-        setLoading(false);
-      }
-    };
-    getUser();
-  }, []);
-
-  const loadUserItems = async (userId) => {
-    try {
-      setLoading(true);
-      console.log('Loading items for user:', userId);
-      
-      // Check if supabase is properly configured
-      if (!process.env.REACT_APP_SUPABASE_URL || !process.env.REACT_APP_SUPABASE_ANON_KEY) {
-        console.log('Supabase not configured, showing empty state');
-        setItems([]);
-        setLoading(false);
-        return;
-      }
-      
-      // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database query timeout')), 5000)
-      );
-      
-      const queryPromise = supabase
-        .from('user_closet')
-        .select('*')
-        .eq('user_id', userId)
-        .order('earned_date', { ascending: false });
-
-      const { data: closetItems, error } = await Promise.race([queryPromise, timeoutPromise]);
-
-      if (error) {
-        console.error('Database error:', error);
-        throw error;
-      }
-
-      console.log('Database query successful, items found:', closetItems?.length || 0);
-
-      // Use real database items or empty array
-      setItems(closetItems || []);
-    } catch (error) {
-      console.error('Error loading closet items:', error);
-      console.log('Error occurred, showing empty state');
-      // On error, show empty state
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Convert themes to digital items with proper requirements
-  const getThemeItems = () => {
+  const themeItems = useMemo(() => {
     return Object.entries(gradientThemes).map(([key, theme]) => {
       const themeRequirements = getThemeRequirements(key);
       const isUnlocked = checkThemeOwnership(key);
-      
-      console.log(`Theme ${key}:`, { 
-        isUnlocked, 
-        ownedThemes: ownedThemes, 
-        requirements: themeRequirements 
-      });
       
       return {
         id: `theme-${key}`,
@@ -1292,62 +982,44 @@ const ClosetScreen = () => {
         icon: '🎨',
         description: themeRequirements?.description || '',
         requirements: themeRequirements?.requirements || [],
-        unlocked: true, // TEMPORARY: Force all themes unlocked for testing
+        unlocked: isUnlocked, // Use real unlock status
         equipped: equippedTheme === key,
         earned_date: '2025-03-01',
         earned_via: 'unlock',
         wings_earned: 0
       };
     });
-  };
+  }, [gradientThemes, getThemeRequirements, checkThemeOwnership, equippedTheme]);
 
-  // Combine regular items with theme items
-  const allItems = [...items, ...getThemeItems()];
+  const allItems = useMemo(() => 
+    [...closetItems, ...themeItems], 
+    [closetItems, themeItems]
+  );
 
-  // Enhance items with limited edition information
-  const enhancedItems = allItems.map(item => {
-    const staticReward = getRewardById(item.reward_id || item.item_id);
-    const isLimitedEdition = staticReward?.limitedEdition;
-    
-    return {
+  // Enhanced items
+  const enhancedItems = useMemo(() => 
+    allItems.map(item => ({
       ...item,
-      isLimitedEdition,
-      limitedEditionConfig: staticReward?.limitedEdition,
-      exclusivityLevel: staticReward?.limitedEdition?.exclusivityLevel || 'limited',
-      totalSupply: staticReward?.limitedEdition?.totalSupply,
-      staticReward
-    };
-  });
+      isLimitedEdition: false
+    })), 
+    [allItems]
+  );
 
-  // Filter items based on selected filters
-  const filteredItems = enhancedItems.filter(item => {
-    // Main filter (Physical/Digital/Limited)
-    if (mainFilter === 'physical' && item.item_type !== 'physical_item') return false;
-    if (mainFilter === 'digital' && item.item_type !== 'digital_collectible') return false;
-    if (mainFilter === 'limited' && !item.isLimitedEdition) return false;
+  const filteredItems = useMemo(() => 
+    enhancedItems.filter(item => {
+      // Main filter (Physical/Digital)
+      if (mainFilter === 'physical' && item.item_type !== 'physical_item') return false;
+      if (mainFilter === 'digital' && item.item_type !== 'digital_collectible') return false;
 
-    // Sub filter (category)
-    if (subFilter !== 'all' && item.category !== subFilter) return false;
+      // Sub filter (category)
+      if (subFilter !== 'all' && item.category !== subFilter) return false;
 
-    return true;
-  });
+      return true;
+    }), 
+    [enhancedItems, mainFilter, subFilter]
+  );
 
-  // Calculate limited edition statistics
-  const limitedEditionItems = enhancedItems.filter(item => item.isLimitedEdition);
-  const limitedEditionStats = {
-    total: limitedEditionItems.length,
-    byExclusivity: limitedEditionItems.reduce((acc, item) => {
-      const level = item.exclusivityLevel;
-      acc[level] = (acc[level] || 0) + 1;
-      return acc;
-    }, {}),
-    totalSupply: limitedEditionItems.reduce((sum, item) => sum + (item.totalSupply || 0), 0),
-    averageRarity: limitedEditionItems.length > 0 ? 
-      limitedEditionItems.reduce((sum, item) => sum + (item.totalSupply || 0), 0) / limitedEditionItems.length : 0
-  };
-
-  // Get unique categories for sub-filters
-  const getSubFilterOptions = () => {
+  const subFilterOptions = useMemo(() => {
     const categories = [...new Set(allItems
       .filter(item => {
         if (mainFilter === 'physical') return item.item_type === 'physical_item';
@@ -1357,34 +1029,126 @@ const ClosetScreen = () => {
       .map(item => item.category))];
     
     return categories.sort();
+  }, [allItems, mainFilter]);
+
+  const displayStats = {
+    total: stats.total,
+    physical: stats.physical,
+    digital: stats.digital,
+    limited: stats.limited,
+    legendary: stats.legendary,
+    epic: stats.epic,
   };
 
-  // Calculate stats
-  const stats = {
-    total: allItems.length,
-    physical: allItems.filter(item => item.item_type === 'physical_item').length,
-    digital: allItems.filter(item => item.item_type === 'digital_collectible').length,
-    limited: limitedEditionItems.length,
-    legendary: allItems.filter(item => item.rarity === 'legendary').length,
-    epic: allItems.filter(item => item.rarity === 'epic').length,
-  };
-
-  if (loading) {
+  // Show loading only if we're actually loading AND don't have any data yet
+  const shouldShowLoading = (authLoading || themesLoading || closetLoading) && 
+                           (!closetItems || closetItems.length === 0);
+  
+  // If we have a user but no items and not loading, show empty state
+  const hasUserButNoItems = user && !closetLoading && (!closetItems || closetItems.length === 0);
+  
+  if (shouldShowLoading && !hasUserButNoItems) {
     return (
       <Container>
         <ScreenTitle>My Closet</ScreenTitle>
-        <div style={{ textAlign: 'center', padding: '3rem' }}>Loading your collection...</div>
+        
+        {/* Skeleton Loading */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+          gap: '1rem', 
+          padding: '1rem 0' 
+        }}>
+          {[...Array(6)].map((_, i) => (
+            <div key={i} style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '12px',
+              padding: '1rem',
+              height: '200px',
+              animation: 'pulse 1.5s ease-in-out infinite',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <div style={{
+                width: '60px',
+                height: '60px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '8px',
+                marginBottom: '0.5rem'
+              }} />
+              <div style={{
+                width: '80%',
+                height: '16px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '4px',
+                marginBottom: '0.5rem'
+              }} />
+              <div style={{
+                width: '60%',
+                height: '12px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '4px'
+              }} />
+            </div>
+          ))}
+        </div>
+        
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+          }
+        `}</style>
+        <NavBar />
       </Container>
     );
   }
 
   return (
     <Container>
-      <ScreenTitle>My Closet</ScreenTitle>
-      <>
-        {/* Floating Stats Button */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '1rem' 
+      }}>
+        <ScreenTitle>My Closet</ScreenTitle>
+        <div style={{
+          fontSize: '0.8rem',
+          color: 'rgba(255, 255, 255, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          {isCacheValid && (
+            <>
+              <span>🔄 Cached</span>
+              <button 
+                onClick={() => refreshCloset()}
+                style={{
+                  background: 'rgba(255, 176, 0, 0.1)',
+                  border: '1px solid rgba(255, 176, 0, 0.3)',
+                  borderRadius: '4px',
+                  padding: '0.25rem 0.5rem',
+                  color: '#FFB000',
+                  fontSize: '0.7rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Refresh
+              </button>
+            </>
+          )}
+          
+
+        </div>
+              </div>
+        
+
+        
+        <>
+          {/* Floating Stats Button */}
         <FloatingStatsButton onClick={() => setShowStatsModal(true)}>
-          <span className="stats-count">{stats.total}</span>
+          <span className="stats-count">{displayStats.total}</span>
         </FloatingStatsButton>
 
         {/* Stats Modal */}
@@ -1398,63 +1162,34 @@ const ClosetScreen = () => {
               <StatsGrid>
                 <StatItem>
                   <StatLabel>Total Items</StatLabel>
-                  <StatValue>{stats.total}</StatValue>
+                  <StatValue>{displayStats.total}</StatValue>
                 </StatItem>
                 <StatItem>
                   <StatLabel>Physical</StatLabel>
-                  <StatValue>{stats.physical}</StatValue>
+                  <StatValue>{displayStats.physical}</StatValue>
                 </StatItem>
                 <StatItem>
                   <StatLabel>Digital</StatLabel>
-                  <StatValue>{stats.digital}</StatValue>
+                  <StatValue>{displayStats.digital}</StatValue>
                 </StatItem>
                 <StatItem>
                   <StatLabel>Limited Edition</StatLabel>
-                  <StatValue>{stats.limited}</StatValue>
+                  <StatValue>{displayStats.limited}</StatValue>
                 </StatItem>
                 <StatItem>
                   <StatLabel>Legendary</StatLabel>
-                  <StatValue>{stats.legendary}</StatValue>
+                  <StatValue>{displayStats.legendary}</StatValue>
                 </StatItem>
                 <StatItem>
                   <StatLabel>Epic</StatLabel>
-                  <StatValue>{stats.epic}</StatValue>
+                  <StatValue>{displayStats.epic}</StatValue>
                 </StatItem>
               </StatsGrid>
             </ModalContent>
           </StatsModal>
         )}
 
-          {/* Limited Edition Collection Stats */}
-          {limitedEditionStats.total > 0 && (
-            <LimitedEditionStats>
-              <h3>Limited Edition Collection</h3>
-              <div className="stats-grid">
-                <div className="stat-item">
-                  <div className="label">Total Limited Items</div>
-                  <div className="value">{limitedEditionStats.total}</div>
-                </div>
-                <div className="stat-item">
-                  <div className="label">Total Supply</div>
-                  <div className="value">{limitedEditionStats.totalSupply.toLocaleString()}</div>
-                </div>
-                <div className="stat-item">
-                  <div className="label">Avg. Rarity</div>
-                  <div className="value">{Math.round(limitedEditionStats.averageRarity)}</div>
-                </div>
-              </div>
-              <div className="exclusivity-breakdown">
-                {Object.entries(limitedEditionStats.byExclusivity).map(([level, count]) => (
-                  <LimitedEditionBadge
-                    key={level}
-                    exclusivityLevel={level}
-                    size="small"
-                    showIcon={false}
-                  />
-                ))}
-              </div>
-            </LimitedEditionStats>
-          )}
+
 
           <MainFilterTabs>
             <FilterTab 
@@ -1487,16 +1222,7 @@ const ClosetScreen = () => {
             >
               Digital
             </FilterTab>
-            <FilterTab 
-              type="main"
-              active={mainFilter === 'limited'} 
-              onClick={() => {
-                setMainFilter('limited');
-                setSubFilter('all');
-              }}
-            >
-              Limited Edition
-            </FilterTab>
+
           </MainFilterTabs>
 
           <SubFilterTabs>
@@ -1507,7 +1233,7 @@ const ClosetScreen = () => {
             >
               All Categories
             </FilterTab>
-            {getSubFilterOptions().map(category => (
+            {subFilterOptions.map(category => (
               <FilterTab 
                 key={category}
                 type="sub"
@@ -1533,12 +1259,7 @@ const ClosetScreen = () => {
                     opacity: item.unlocked ? 1 : 0.6
                   } : {}}
                 >
-                  {/* Limited Edition Indicator */}
-                  {item.isLimitedEdition && (
-                    <LimitedEditionIndicator>
-                      Limited
-                    </LimitedEditionIndicator>
-                  )}
+
                   
                   {/* Mint Number Badge */}
                   {item.mint_number && (
@@ -1625,7 +1346,7 @@ const ClosetScreen = () => {
             </ItemsGrid>
           ) : (
             <EmptyState>
-              {loading ? (
+              {closetLoading ? (
                 <>
                   <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⏳</div>
                   <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Loading your closet...</div>
@@ -1654,6 +1375,9 @@ const ClosetScreen = () => {
             onClose={() => setSelectedItem(null)}
           />
         </>
+        
+        {/* Navigation Bar */}
+        <NavBar />
     </Container>
   );
 };
@@ -1669,13 +1393,8 @@ const getItemIcon = (category, itemType, item = null) => {
     footwear: '👟'
   };
 
-  // Updated digital icons - removed tokens, added new categories
   const digitalIcons = {
-    // badges: '🏆',
-    // passes: '🎫',
     wallpapers: '🖼️',
-    // audio_stickers: '🎵',
-    // stickers: '💎',
     tickets: '🎟️',
     posters: '🖼️',
     themes: '🎨'
@@ -1690,22 +1409,16 @@ const getItemIcon = (category, itemType, item = null) => {
   }
 };
 
-// Helper function to get proper display names for categories
 const getCategoryDisplayName = (category) => {
   const displayNames = {
-    // audio_stickers: 'Audio Stickers',
     wallpapers: 'Wallpapers',
-    // stickers: 'Stickers',
     themes: 'Themes',
-    // Keep existing ones
     jackets: 'Jackets',
     tops: 'Tops',
     bottoms: 'Bottoms',
     headwear: 'Headwear',
     accessories: 'Accessories',
     footwear: 'Footwear',
-    // badges: 'Badges',
-    // passes: 'Passes',
     tickets: 'Tickets',
     posters: 'Posters'
   };

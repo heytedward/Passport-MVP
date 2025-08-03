@@ -65,8 +65,11 @@ const CircularQRGenerator = () => {
   };
 
   useEffect(() => {
-    setEncodedBits(encodeData(inputData));
-  }, [inputData]);
+    if (inputData && inputData.trim()) {
+      const encoded = encodeData(inputData);
+      setEncodedBits(encoded);
+    }
+  }, [inputData, encodeData]);
 
   const downloadSVG = () => {
     const svg = document.getElementById('circular-qr-svg');

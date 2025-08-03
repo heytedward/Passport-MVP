@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../hooks/useAuth';
 import { useStamps } from '../hooks/useStamps';
+import { useQuests } from '../hooks/useQuests';
 import GlassCard from './GlassCard';
 import LiveCountdown from './LiveCountdown';
 
@@ -233,140 +234,19 @@ const DailiesModal = ({ isOpen, onClose, onQuestComplete }) => {
   const [completedQuests, setCompletedQuests] = useState(new Set());
   const [loading, setLoading] = useState(false);
 
-  // Load today's completed quests from database
+  const {
+    todaysCompletions,
+    loadTodaysCompletions,
+    markQuestComplete
+  } = useQuests();
+
   useEffect(() => {
-    if (isOpen && user) {
+    if (isOpen) {
       loadTodaysCompletions();
     }
-  }, [isOpen, user]);
+  }, [isOpen, loadTodaysCompletions]);
 
-  const loadTodaysCompletions = async () => {
-    if (!user) return;
-    
-    try {
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-      
-      const { data, error } = await supabase
-        .from('daily_completions')
-        .select('quest_id')
-        .eq('user_id', user.id)
-        .eq('completion_date', today);
 
-      if (error) {
-        console.error('Error loading daily completions:', error);
-        return;
-      }
-
-      const completed = new Set(data.map(d => d.quest_id));
-      setCompletedQuests(completed);
-    } catch (err) {
-      console.error('Error loading daily completions:', err);
-    }
-  };
-
-  const recordDailyCompletion = async (questId, wingsAmount, questTitle) => {
-    if (!user) return;
-    
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      
-      // Insert daily completion record
-      const { error: completionError } = await supabase
-        .from('daily_completions')
-        .insert({
-          user_id: user.id,
-          quest_id: questId,
-          completion_date: today,
-          wings_earned: wingsAmount,
-          quest_title: questTitle
-        })
-        .select()
-        .single();
-
-      if (completionError) {
-        console.error('Error recording daily completion:', completionError);
-        return;
-      }
-
-      // Award WNGS using the RPC function
-      const { error: wingsError } = await supabase.rpc('add_wings_to_user', {
-        user_id_param: user.id,
-        wings_amount: wingsAmount,
-        activity_type_param: 'daily_quest',
-        description_param: `Completed daily quest: ${questTitle}`
-      });
-
-      if (wingsError) {
-        console.error('Error awarding WNGS:', wingsError);
-      }
-
-      // Check for streak and award streak stamp if needed
-      await checkAndAwardStreak();
-      
-    } catch (err) {
-      console.error('Error in recordDailyCompletion:', err);
-    }
-  };
-
-  const checkAndAwardStreak = async () => {
-    if (!user) return;
-    
-    try {
-      // Get last 7 days of completions
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6); // Today + 6 days ago = 7 days total
-      
-      const { data, error } = await supabase
-        .from('daily_completions')
-        .select('completion_date')
-        .eq('user_id', user.id)
-        .gte('completion_date', sevenDaysAgo.toISOString().split('T')[0])
-        .order('completion_date', { ascending: false });
-
-      if (error) {
-        console.error('Error checking streak:', error);
-        return;
-      }
-
-      // Check if we have completions for 7 consecutive days
-      const uniqueDates = [...new Set(data.map(d => d.completion_date))];
-      
-      if (uniqueDates.length >= 7) {
-        // Check if the dates are consecutive (including today)
-        const today = new Date().toISOString().split('T')[0];
-        const sortedDates = uniqueDates.sort().reverse(); // Most recent first
-        
-        let consecutiveDays = 0;
-        let currentDate = new Date(today);
-        
-        for (let i = 0; i < sortedDates.length && i < 7; i++) {
-          const expectedDate = currentDate.toISOString().split('T')[0];
-          if (sortedDates[i] === expectedDate) {
-            consecutiveDays++;
-            currentDate.setDate(currentDate.getDate() - 1);
-          } else {
-            break;
-          }
-        }
-        
-        if (consecutiveDays >= 7) {
-          try {
-            // Only award streak stamp if awardStreakStamp function is available
-            if (typeof awardStreakStamp === 'function') {
-              await awardStreakStamp(7);
-              console.log('🔥 Streak Master stamp awarded for 7-day streak!');
-            } else {
-              console.log('🔥 7-day streak achieved! (Streak stamp function not available)');
-            }
-          } catch (stampError) {
-            console.warn('Streak stamp might already be earned or function unavailable:', stampError);
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Error checking streak:', err);
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -389,7 +269,7 @@ const DailiesModal = ({ isOpen, onClose, onQuestComplete }) => {
       window.open(twitterUrl, '_blank');
       
       // Record completion and award WNGS
-      await recordDailyCompletion('twitter', 10, 'Say GM on Twitter/X');
+      await markQuestComplete('twitter');
       
       // Update local state
       setCompletedQuests(prev => new Set([...prev, 'twitter']));
@@ -416,7 +296,7 @@ const DailiesModal = ({ isOpen, onClose, onQuestComplete }) => {
       window.open(instagramUrl, '_blank');
       
       // Record completion and award WNGS
-      await recordDailyCompletion('instagram', 15, 'Engage on Instagram');
+      await markQuestComplete('instagram');
       
       // Update local state
       setCompletedQuests(prev => new Set([...prev, 'instagram']));

@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { Html5Qrcode, Html5QrcodeScanType } from 'html5-qrcode';
+// Dynamic import for html5-qrcode to prevent chunk loading issues
+// import { Html5Qrcode, Html5QrcodeScanType } from 'html5-qrcode';
 import { useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from '../hooks/useAuth';
 import { useStamps } from '../hooks/useStamps';
 import { useReferrals } from '../hooks/useReferrals';
 import { useMonarchRewards } from '../hooks/useMonarchRewards';
+import { enhancedSecurity } from '../utils/enhancedSecurity';
 // Circular QR imports commented out for now
 // import { detectCircularQR } from '../utils/circularQRDetection';
 // import { validateSecureCircularQR, decryptCircularQR } from '../utils/secureCircularQR';
@@ -18,6 +20,7 @@ import {
   processLimitedEditionQR,
   getLimitedEditionModalData 
 } from '../utils/limitedEditionQRProcessor';
+import NavBar from '../components/NavBar';
 
 // Supabase client
 const supabase = createClient(
@@ -94,6 +97,58 @@ const ErrorCard = styled(GlassCard)`
   text-align: center;
   background: rgba(231, 76, 60, 0.1);
   border: 1px solid rgba(231, 76, 60, 0.3);
+`;
+
+const LoadingProgressBar = styled.div`
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 176, 0, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 1rem 0;
+`;
+
+const LoadingProgressFill = styled.div`
+  height: 100%;
+  background: linear-gradient(90deg, #FFB000, #FFD700);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  width: ${props => props.progress}%;
+`;
+
+const LoadingSpinner = styled.div`
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 176, 0, 0.2);
+  border-top: 3px solid #FFB000;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
+const StateTransition = styled.div`
+  opacity: ${props => props.visible ? 1 : 0};
+  transform: translateY(${props => props.visible ? 0 : '20px'});
+  transition: all 0.3s ease-in-out;
+`;
+
+const ConnectionIndicator = styled.div`
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.5rem 1rem;
+  background: rgba(18, 18, 18, 0.8);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: ${props => props.quality === 'good' ? '#4CAF50' : props.quality === 'slow' ? '#FF9800' : '#f44336'};
+  border: 1px solid ${props => props.quality === 'good' ? '#4CAF50' : props.quality === 'slow' ? '#FF9800' : '#f44336'};
+  backdrop-filter: blur(10px);
+  z-index: 10;
 `;
 
 const ButtonContainer = styled.div`
@@ -327,9 +382,116 @@ const ScanScreen = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [limitedEditionResult, setLimitedEditionResult] = useState(null);
   const [showLimitedEditionModal, setShowLimitedEditionModal] = useState(false);
+  const [qrLibraryLoaded, setQrLibraryLoaded] = useState(false);
+  const [qrLibraryError, setQrLibraryError] = useState(null);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
+  const [connectionQuality, setConnectionQuality] = useState('unknown');
   // Removed showPermissionRequest and debugInfo states for cleaner flow
   const qrCodeScannerRef = useRef(null);
+  const qrLibraryRef = useRef(null);
   const scannerElementId = "qr-reader";
+
+  // Check connection quality
+  const checkConnectionQuality = useCallback(() => {
+    if ('connection' in navigator) {
+      const connection = navigator.connection;
+      if (connection.effectiveType === '4g') {
+        setConnectionQuality('good');
+      } else if (connection.effectiveType === '3g' || connection.effectiveType === '2g') {
+        setConnectionQuality('slow');
+      } else {
+        setConnectionQuality('poor');
+      }
+    } else {
+      setConnectionQuality('unknown');
+    }
+  }, []);
+
+  // Dynamic import of html5-qrcode library with progress tracking and timeout
+  const loadQRLibrary = useCallback(async () => {
+    try {
+      setQrLibraryError(null);
+      setQrLibraryLoaded(false);
+      setLoadingProgress(0);
+      
+      // Check connection quality
+      checkConnectionQuality();
+      
+      // Increment retry count
+      setRetryCount(prev => prev + 1);
+      
+      // Limit retries to 3 attempts
+      if (retryCount >= 3) {
+        throw new Error('Max retries exceeded');
+      }
+      
+      // Simulate loading progress for better UX
+      const progressInterval = setInterval(() => {
+        setLoadingProgress(prev => Math.min(prev + 10, 80));
+      }, 100);
+      
+      // Add a small delay to prevent rapid retries
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Add timeout for slow connections (15 seconds)
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Loading timeout')), 15000);
+      });
+      
+      const importPromise = import('html5-qrcode');
+      
+      const { Html5Qrcode, Html5QrcodeScanType } = await Promise.race([
+        importPromise,
+        timeoutPromise
+      ]);
+      
+      // Verify the imported classes are valid
+      if (!Html5Qrcode || !Html5QrcodeScanType) {
+        throw new Error('Invalid QR library imports');
+      }
+      
+      // Store the imported classes in separate ref for library access
+      qrLibraryRef.current = { Html5Qrcode, Html5QrcodeScanType };
+      
+      // Complete loading progress
+      clearInterval(progressInterval);
+      setLoadingProgress(100);
+      
+      // Small delay to show completion
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      setQrLibraryLoaded(true);
+    } catch (error) {
+      console.error('Failed to load QR library:', error);
+      
+      let errorMessage = 'Failed to load QR scanning library. ';
+      
+      if (error.message === 'Max retries exceeded') {
+        errorMessage += 'Multiple attempts failed. Please refresh the page or try again later.';
+      } else if (error.message === 'Loading timeout') {
+        errorMessage += 'Loading took too long. Please check your connection and try again.';
+      } else if (error.name === 'ChunkLoadError') {
+        errorMessage += 'Network error loading scanner. Please check your connection and try again.';
+      } else if (error.message.includes('Invalid QR library imports')) {
+        errorMessage += 'Scanner library corrupted. Please refresh the page.';
+      } else {
+        errorMessage += 'Please refresh the page and try again.';
+      }
+      
+      setQrLibraryError(errorMessage);
+    }
+  }, []);
+
+  // Load QR library on component mount
+  useEffect(() => {
+    loadQRLibrary();
+    
+    // Reset retry count when component unmounts
+    return () => {
+      setRetryCount(0);
+    };
+  }, [loadQRLibrary]);
 
   // Removed camera permissions check for streamlined flow
 
@@ -790,6 +952,29 @@ const ScanScreen = () => {
     try {
       console.log('🔄 Processing scan result:', result);
 
+      // Enhanced security validation for QR scan
+      const securityResult = await enhancedSecurity.enhancedQRScan(
+        user.id, 
+        result.text, 
+        { 
+          scanType: result.type || 'regular',
+          timestamp: Date.now(),
+          userAgent: navigator.userAgent
+        }
+      );
+
+      if (!securityResult.success) {
+        // Track suspicious activity for failed scans
+        enhancedSecurity.trackSuspiciousActivity(user.id, 'failed_qr_scan', {
+          error: securityResult.error,
+          qrData: result.text.substring(0, 20) + '...'
+        });
+        
+        throw new Error(securityResult.message || 'QR scan security validation failed');
+      }
+
+      console.log('🔒 Security validation passed:', securityResult);
+
       // First, validate the QR code using the new limited edition validator
       const validation = validateLimitedEditionQR(result.text);
       if (!validation.valid) {
@@ -1084,6 +1269,10 @@ const ScanScreen = () => {
       // Get available cameras
       let devices;
       try {
+        if (!qrLibraryLoaded || !qrLibraryRef.current) {
+          throw new Error('QR library not loaded');
+        }
+        const { Html5Qrcode } = qrLibraryRef.current;
         devices = await Html5Qrcode.getCameras();
       } catch (deviceError) {
         console.error('Failed to get cameras:', deviceError);
@@ -1103,11 +1292,13 @@ const ScanScreen = () => {
         return;
       }
 
+      const { Html5Qrcode } = qrLibraryRef.current;
       const qrCodeScanner = new Html5Qrcode(scannerElementId);
       qrCodeScannerRef.current = qrCodeScanner;
 
       // Canvas creation for circular QR analysis removed - using regular QR only
 
+      const { Html5QrcodeScanType } = qrLibraryRef.current;
       const mobileConfig = {
         fps: 10,
         qrbox: { width: 200, height: 200 },
@@ -1318,37 +1509,138 @@ const ScanScreen = () => {
     );
   }
 
+  // Show loading state while QR library is loading
+  if (!qrLibraryLoaded && !qrLibraryError) {
+    return (
+      <Container>
+        <StateTransition visible={true}>
+          <ScannerCard>
+            <LoadingSpinner />
+            <h2 style={{ marginBottom: '1rem', color: '#fff' }}>Loading Scanner</h2>
+            <p style={{ marginBottom: '1rem', color: '#ccc', lineHeight: '1.6', fontSize: '1.1rem' }}>
+              Initializing QR scanning library...
+            </p>
+            <LoadingProgressBar>
+              <LoadingProgressFill progress={loadingProgress} />
+            </LoadingProgressBar>
+            <p style={{ color: '#999', fontSize: '0.9rem' }}>
+              {loadingProgress < 50 ? 'Downloading scanner components...' : 
+               loadingProgress < 80 ? 'Initializing camera access...' : 
+               'Finalizing setup...'}
+            </p>
+            {connectionQuality !== 'unknown' && (
+              <ConnectionIndicator quality={connectionQuality}>
+                {connectionQuality === 'good' ? '📶 Fast Connection' :
+                 connectionQuality === 'slow' ? '📶 Slow Connection' :
+                 '📶 Poor Connection'}
+              </ConnectionIndicator>
+            )}
+          </ScannerCard>
+        </StateTransition>
+      </Container>
+    );
+  }
+
+  // Show error state if QR library failed to load
+  if (qrLibraryError) {
+    return (
+      <Container>
+        <StateTransition visible={true}>
+          <ScannerCard>
+            <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>⚠️</div>
+            <h2 style={{ marginBottom: '1rem', color: '#fff' }}>Scanner Error</h2>
+            <p style={{ marginBottom: '2.5rem', color: '#ccc', lineHeight: '1.6', fontSize: '1.1rem' }}>
+              {qrLibraryError}
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <GlowButton 
+                onClick={loadQRLibrary}
+                disabled={retryCount >= 3}
+                style={retryCount >= 3 ? { 
+                  background: 'transparent',
+                  borderColor: '#666',
+                  color: '#666',
+                  cursor: 'not-allowed'
+                } : {}}
+              >
+                {retryCount >= 3 ? '❌ Max Retries' : `🔄 Retry Loading (${retryCount}/3)`}
+              </GlowButton>
+              <GlowButton onClick={() => window.location.reload()}>
+                🔄 Refresh Page
+              </GlowButton>
+              <GlowButton 
+                onClick={() => navigate('/')}
+                style={{ 
+                  background: 'transparent',
+                  borderColor: '#666',
+                  color: '#ccc'
+                }}
+              >
+                Back to Home
+              </GlowButton>
+            </div>
+          </ScannerCard>
+        </StateTransition>
+      </Container>
+    );
+  }
+
   return (
     <Container>
-      {!isScanning && (
-        <ScannerCard>
-          <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🎯</div>
-          <h2 style={{ marginBottom: '1rem', color: '#fff' }}>Ready to Scan</h2>
-          
-          <p style={{ marginBottom: '2.5rem', color: '#ccc', lineHeight: '1.6', fontSize: '1.1rem' }}>
-            Point your camera at a QR code on a Papillon item to earn rewards
-          </p>
+      <>
+        {/* Ready to Scan State */}
+        {!isScanning && (
+          <StateTransition visible={!isScanning}>
+            <ScannerCard>
+              <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🎯</div>
+              <h2 style={{ marginBottom: '1rem', color: '#fff' }}>Ready to Scan</h2>
+              
+              <p style={{ marginBottom: '2.5rem', color: '#ccc', lineHeight: '1.6', fontSize: '1.1rem' }}>
+                Point your camera at a QR code on a Papillon item to earn rewards
+              </p>
 
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <GlowButton onClick={handleStartScanning}>
-              📱 Start Scanning
-            </GlowButton>
-            <GlowButton 
-              onClick={() => navigate('/')}
-              style={{ 
-                background: 'transparent',
-                borderColor: '#666',
-                color: '#ccc'
-              }}
-            >
-              Back to Home
-            </GlowButton>
-          </div>
-        </ScannerCard>
-      )}
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <GlowButton onClick={handleStartScanning} disabled={isLoading}>
+                  {isLoading ? '⏳ Initializing...' : '📱 Start Scanning'}
+                </GlowButton>
+                <GlowButton 
+                  onClick={() => navigate('/')}
+                  style={{ 
+                    background: 'transparent',
+                    borderColor: '#666',
+                    color: '#ccc'
+                  }}
+                  disabled={isLoading}
+                >
+                  Back to Home
+                </GlowButton>
+              </div>
+            </ScannerCard>
+          </StateTransition>
+        )}
 
-      {isScanning && (
-        <>
+        {/* Scanning State */}
+        {isScanning && (
+        <StateTransition visible={isScanning}>
+          {/* Camera initialization loading state */}
+          {isLoading && (
+            <LoadingOverlay>
+              <ScannerCard>
+                <LoadingSpinner />
+                <h2 style={{ marginBottom: '1rem', color: '#fff' }}>Initializing Camera</h2>
+                <p style={{ marginBottom: '1rem', color: '#ccc', lineHeight: '1.6', fontSize: '1.1rem' }}>
+                  Setting up camera access...
+                </p>
+                <LoadingProgressBar>
+                  <LoadingProgressFill progress={50} />
+                </LoadingProgressBar>
+                <p style={{ color: '#999', fontSize: '0.9rem' }}>
+                  Please allow camera permissions when prompted
+                </p>
+              </ScannerCard>
+            </LoadingOverlay>
+          )}
+
           {/* Debug buttons for circular QR testing - commented out for now */}
           {/*
           {process.env.NODE_ENV === 'development' && (
@@ -1394,7 +1686,7 @@ const ScanScreen = () => {
           )}
           */}
 
-          {/* Title overlay */}
+              {/* Title overlay */}
           <div style={{
             position: 'absolute',
             top: '60px',
@@ -1578,57 +1870,116 @@ const ScanScreen = () => {
 
           {/* Camera error overlay */}
           {cameraError && (
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 15,
-              padding: '2rem',
-              background: 'rgba(18, 18, 18, 0.95)',
-              borderRadius: '16px',
-              border: '2px solid rgba(231, 76, 60, 0.4)',
-              textAlign: 'center',
-              maxWidth: '90vw',
-              width: '350px',
-              backdropFilter: 'blur(20px)'
-            }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📱</div>
-              
-              <h3 style={{ color: '#e74c3c', marginBottom: '1rem', fontSize: '1.2rem' }}>
-                Camera Access Required
-              </h3>
-              
-              <p style={{ color: '#ccc', marginBottom: '2rem', fontSize: '1rem', lineHeight: '1.4' }}>
-                {cameraError}
-              </p>
-              
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                <GlowButton 
-                  onClick={handleRetryCamera} 
-                  style={{ 
-                    background: '#4C1C8C',
-                    borderColor: '#4C1C8C'
-                  }}
-                >
-                  🔄 Try Again
-                </GlowButton>
-                <GlowButton 
-                  onClick={() => navigate('/')} 
-                  style={{ 
-                    background: 'transparent',
-                    borderColor: '#666',
-                    color: '#ccc'
-                  }}
-                >
-                  ← Go Back
-                </GlowButton>
+            <StateTransition visible={true}>
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 15,
+                padding: '2rem',
+                background: 'rgba(18, 18, 18, 0.95)',
+                borderRadius: '16px',
+                border: '2px solid rgba(231, 76, 60, 0.4)',
+                textAlign: 'center',
+                maxWidth: '90vw',
+                width: '350px',
+                backdropFilter: 'blur(20px)'
+              }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📱</div>
+                
+                <h3 style={{ color: '#e74c3c', marginBottom: '1rem', fontSize: '1.2rem' }}>
+                  Camera Access Required
+                </h3>
+                
+                <p style={{ color: '#ccc', marginBottom: '2rem', fontSize: '1rem', lineHeight: '1.4' }}>
+                  {cameraError}
+                </p>
+                
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <GlowButton 
+                    onClick={handleRetryCamera} 
+                    style={{ 
+                      background: '#4C1C8C',
+                      borderColor: '#4C1C8C'
+                    }}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? '⏳ Retrying...' : '🔄 Try Again'}
+                  </GlowButton>
+                  <GlowButton 
+                    onClick={() => navigate('/')} 
+                    style={{ 
+                      background: 'transparent',
+                      borderColor: '#666',
+                      color: '#ccc'
+                    }}
+                    disabled={isLoading}
+                  >
+                    ← Go Back
+                  </GlowButton>
+                </div>
               </div>
-            </div>
+            </StateTransition>
           )}
-        </>
+
+          {/* Camera error state */}
+          {cameraError && (
+            <StateTransition visible={!!cameraError}>
+              <div style={{
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                background: 'rgba(0, 0, 0, 0.95)',
+                padding: '2rem',
+                borderRadius: '16px',
+                border: '2px solid rgba(231, 76, 60, 0.4)',
+                textAlign: 'center',
+                maxWidth: '90vw',
+                width: '350px',
+                backdropFilter: 'blur(20px)'
+              }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📱</div>
+                
+                <h3 style={{ color: '#e74c3c', marginBottom: '1rem', fontSize: '1.2rem' }}>
+                  Camera Access Required
+                </h3>
+                
+                <p style={{ color: '#ccc', marginBottom: '2rem', fontSize: '1rem', lineHeight: '1.4' }}>
+                  {cameraError}
+                </p>
+                
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <GlowButton 
+                    onClick={handleRetryCamera} 
+                    style={{ 
+                      background: '#4C1C8C',
+                      borderColor: '#4C1C8C'
+                    }}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? '⏳ Retrying...' : '🔄 Try Again'}
+                  </GlowButton>
+                  <GlowButton 
+                    onClick={() => navigate('/')} 
+                    style={{ 
+                      background: 'transparent',
+                      borderColor: '#666',
+                      color: '#ccc'
+                    }}
+                    disabled={isLoading}
+                  >
+                    ← Go Back
+                  </GlowButton>
+                </div>
+              </div>
+            </StateTransition>
+          )}
+        </StateTransition>
       )}
 
+      {/* Error state */}
       {error && (
         <ErrorCard>
           <h3 style={{ color: '#e74c3c', marginBottom: '1rem' }}>Scan Failed</h3>
@@ -1674,6 +2025,10 @@ const ScanScreen = () => {
           onShowInCloset={handleShowLimitedEditionInCloset}
         />
       )}
+      
+      {/* Navigation Bar */}
+      <NavBar />
+      </>
     </Container>
   );
 };

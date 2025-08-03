@@ -1,8 +1,9 @@
+import React from 'react';
 import styled, { keyframes } from 'styled-components';
 
-const pulseGlow = keyframes`
-  0% { box-shadow: 0 0 16px 0 ${({ theme }) => theme.colors.accent}55; }
-  100% { box-shadow: 0 0 32px 0 ${({ theme }) => theme.colors.accent}; }
+const glow = keyframes`
+  0%, 100% { box-shadow: 0 0 5px #FFB000, 0 0 10px #FFB000, 0 0 15px #FFB000; }
+  50% { box-shadow: 0 0 10px #FFB000, 0 0 20px #FFB000, 0 0 30px #FFB000; }
 `;
 
 const GlowButton = styled.button`

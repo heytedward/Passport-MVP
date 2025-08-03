@@ -6,6 +6,8 @@ import { useStamps } from '../hooks/useStamps';
 import { useThemes } from '../hooks/useThemes';
 import { gradientThemes } from '../styles/theme';
 import FlippableCard from '../components/FlippableCard';
+import GlowButton from '../components/GlowButton';
+import NavBar from '../components/NavBar';
 
 const Container = styled.div`
   height: 100vh;
@@ -531,10 +533,40 @@ const ThemeIndicator = styled.div`
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 `;
 
+const ProgressBar = styled.div`
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 0.5rem 0;
+`;
+
+const ProgressFill = styled.div`
+  height: 100%;
+  background: ${({ themeKey }) => {
+    switch (themeKey) {
+      case 'solarShine':
+        return 'linear-gradient(90deg, #FFB000, #FFD700)';
+      case 'echoGlass':
+        return 'linear-gradient(90deg, #6C6C6C, #9E9E9E)';
+      case 'retroFrame':
+        return 'linear-gradient(90deg, #FAFAFA, #E0E0E0)';
+      case 'nightScan':
+        return 'linear-gradient(90deg, #4C1C8C, #7F3FBF)';
+      default: // frequencyPulse
+        return 'linear-gradient(90deg, #7F3FBF, #9C27B0)';
+    }
+  }};
+  border-radius: 2px;
+  transition: width 0.5s ease;
+  width: ${props => props.progress}%;
+`;
+
 const PassportScreen = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { stamps, loading } = useStamps();
+  const { stamps, loading, error, unlockedCount, totalCount } = useStamps();
   const { equippedTheme } = useThemes();
   const [selectedStamp, setSelectedStamp] = useState(null);
 
@@ -543,7 +575,18 @@ const PassportScreen = () => {
     console.log('PassportScreen - Current equipped theme:', equippedTheme);
   }, [equippedTheme]);
 
-  // Define all possible stamps for the 3x3 grid
+  // Debug stamps data
+  useEffect(() => {
+    console.log('PassportScreen - Stamps data:', {
+      totalStamps: stamps?.length,
+      unlockedCount,
+      totalCount,
+      loading,
+      error
+    });
+  }, [stamps, unlockedCount, totalCount, loading, error]);
+
+  // Define all possible stamps for the 3x3 grid with proper mapping to useStamps data
   const allStamps = [
     { id: 'received_passport', name: 'Welcome', icon: '🎫', description: 'Joined Monarch', rarity: 'Common' },
     { id: 'morning_gm', name: 'GM', icon: '☀️', description: 'Said GM', rarity: 'Common' },
@@ -556,10 +599,16 @@ const PassportScreen = () => {
     { id: 'master_collector', name: 'Master', icon: '👑', description: 'All Stamps', rarity: 'Legendary' }
   ];
 
-  // TEMPORARY: Show no earned stamps for testing
-  const earnedStamps = {};
-
-  const completedCount = Object.keys(earnedStamps).length;
+  // Get earned stamps from useStamps hook
+  const earnedStamps = stamps?.reduce((acc, stamp) => {
+    if (stamp.unlocked) {
+      acc[stamp.stamp_id] = {
+        earned_at: stamp.earnedAt,
+        metadata: stamp.metadata || {}
+      };
+    }
+    return acc;
+  }, {}) || {};
 
   const handleStampClick = (stamp) => {
     const earnedStamp = earnedStamps[stamp.id];
@@ -591,6 +640,93 @@ const PassportScreen = () => {
     return themeNames[themeKey] || 'Frequency Pulse';
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <Container>
+        <PassportBook 
+          themeKey={equippedTheme}
+          themeGradient={gradientThemes[equippedTheme]?.gradient}
+        >
+          <PassportHeader themeKey={equippedTheme}>
+            <SeasonTitle themeKey={equippedTheme}>Fall 2025 - Digital Genesis</SeasonTitle>
+            <PassportTitle themeKey={equippedTheme}>Find Your Wings</PassportTitle>
+            <PassportSubtitle themeKey={equippedTheme}>
+              {user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Collector'}
+            </PassportSubtitle>
+            <StampsCounter themeKey={equippedTheme}>
+              Loading...
+            </StampsCounter>
+          </PassportHeader>
+          
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '200px',
+            color: '#ccc',
+            fontSize: '1.1rem'
+          }}>
+            Loading your stamps...
+          </div>
+        </PassportBook>
+        <NavBar />
+      </Container>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <Container>
+        <PassportBook 
+          themeKey={equippedTheme}
+          themeGradient={gradientThemes[equippedTheme]?.gradient}
+        >
+          <PassportHeader themeKey={equippedTheme}>
+            <SeasonTitle themeKey={equippedTheme}>Fall 2025 - Digital Genesis</SeasonTitle>
+            <PassportTitle themeKey={equippedTheme}>Find Your Wings</PassportTitle>
+            <PassportSubtitle themeKey={equippedTheme}>
+              {user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Collector'}
+            </PassportSubtitle>
+            <StampsCounter themeKey={equippedTheme}>
+              Error
+            </StampsCounter>
+          </PassportHeader>
+          
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '200px',
+            color: '#e74c3c',
+            fontSize: '1.1rem',
+            textAlign: 'center',
+            gap: '1rem'
+          }}>
+            <div>⚠️ Failed to load stamps</div>
+            <div style={{ fontSize: '0.9rem', color: '#ccc' }}>
+              {error}
+            </div>
+            <GlowButton 
+              onClick={() => window.location.reload()}
+              style={{ 
+                background: '#4C1C8C',
+                borderColor: '#4C1C8C',
+                fontSize: '0.9rem',
+                padding: '0.5rem 1rem'
+              }}
+            >
+              🔄 Retry
+            </GlowButton>
+          </div>
+        </PassportBook>
+        <NavBar />
+      </Container>
+    );
+  }
+
   return (
     <Container>
       <PassportBook 
@@ -605,9 +741,16 @@ const PassportScreen = () => {
             {user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Collector'}
           </PassportSubtitle>
           
-                         <StampsCounter themeKey={equippedTheme}>
-                 {completedCount}/9
-               </StampsCounter>
+          <StampsCounter themeKey={equippedTheme}>
+            {unlockedCount}/{totalCount} • {Math.round((unlockedCount / totalCount) * 100)}%
+          </StampsCounter>
+          
+          <ProgressBar>
+            <ProgressFill 
+              progress={Math.round((unlockedCount / totalCount) * 100)} 
+              themeKey={equippedTheme}
+            />
+          </ProgressBar>
         </PassportHeader>
 
         <StampsGrid>
@@ -621,8 +764,45 @@ const PassportScreen = () => {
                 hasStamp={hasStamp}
                 themeKey={equippedTheme}
                 onClick={() => handleStampClick(stamp)}
+                title={hasStamp ? `${stamp.name} - Earned ${new Date(earnedStamps[stamp.id].earned_at).toLocaleDateString()}` : `${stamp.name} - ${stamp.description}`}
               >
-                {/* Empty state - no emoji or name */}
+                {hasStamp ? (
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    justifyContent: 'center', 
+                    alignItems: 'center',
+                    height: '100%',
+                    width: '100%',
+                    gap: '0.2rem'
+                  }}>
+                    <div style={{ fontSize: '1.8rem' }}>
+                      {stamp.icon}
+                    </div>
+                    <div style={{ 
+                      fontSize: '0.6rem', 
+                      opacity: 0.8,
+                      textAlign: 'center',
+                      lineHeight: 1.2
+                    }}>
+                      {new Date(earnedStamps[stamp.id].earned_at).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric' 
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center',
+                    height: '100%',
+                    width: '100%',
+                    opacity: 0.3
+                  }}>
+                    <div style={{ fontSize: '1.2rem' }}>🔒</div>
+                  </div>
+                )}
               </StampSlot>
             );
           })}
@@ -642,6 +822,9 @@ const PassportScreen = () => {
           onClose={handleCloseCard}
         />
       )}
+      
+      {/* Navigation Bar */}
+      <NavBar />
     </Container>
   );
 };

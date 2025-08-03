@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import styled from 'styled-components';
+import { useAuth } from '../hooks/useAuth';
+import { useAdmin } from '../hooks/useAdmin';
+import { adminManager, ROLE_DISPLAY } from '../utils/adminManager';
 import SupabaseConnectionTest from '../components/SupabaseConnectionTest';
+import SecurityDashboard from '../components/SecurityDashboard';
+import AdminUserManager from '../components/AdminUserManager';
+import GlassCard from '../components/GlassCard';
+import GlowButton from '../components/GlowButton';
 
 const AdminScreen = () => {
+  const { user } = useAuth();
+  const { users, rewards, categories, recentActivity, stats, loading, error, isAdmin } = useAdmin();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [categories, setCategories] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [rewards, setRewards] = useState([]);
-  const [stats, setStats] = useState({});
   const [campaigns, setCampaigns] = useState([]);
-  const [recentActivity, setRecentActivity] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Modal states
@@ -95,11 +100,8 @@ const AdminScreen = () => {
   };
 
   useEffect(() => {
-    setCategories(mockCategories);
-    setUsers(mockUsers);
-    setCampaigns(mockCampaigns);
-    setRecentActivity(mockRecentActivity);
-    setStats(mockStats);
+    // Real data is loaded by useAdmin hook
+    setCampaigns(mockCampaigns); // Keep campaigns mock for now
   }, []);
 
   // Navigation items
@@ -107,9 +109,11 @@ const AdminScreen = () => {
     { id: 'dashboard', icon: '📊', label: 'Dashboard' },
     { id: 'campaigns', icon: '🎯', label: 'Campaigns' },
     { id: 'users', icon: '👥', label: 'Users' },
+    { id: 'admin-management', icon: '🦋', label: 'Admin Management' },
     { id: 'rewards', icon: '🎁', label: 'Rewards' },
     { id: 'categories', icon: '📱', label: 'Categories' },
     { id: 'analytics', icon: '📈', label: 'Analytics' },
+    { id: 'security', icon: '🔒', label: 'Security' },
     { id: 'connection', icon: '🔗', label: 'Connection Test' }
   ];
 
@@ -125,13 +129,8 @@ const AdminScreen = () => {
   };
 
   const toggleCategory = (categoryName) => {
-    setCategories(prev => 
-      prev.map(cat => 
-        cat.name === categoryName 
-          ? { ...cat, enabled: !cat.enabled }
-          : cat
-      )
-    );
+    // TODO: Implement real category toggle with useAdmin hook
+    console.log('Toggle category:', categoryName);
   };
 
   const createReward = () => {
@@ -140,11 +139,11 @@ const AdminScreen = () => {
       return;
     }
     
-    const reward = { id: Date.now(), ...newReward, active: true };
-    setRewards(prev => [...prev, reward]);
+    // TODO: Implement real reward creation with useAdmin hook
+    console.log('Create reward:', newReward);
     setShowCreateRewardModal(false);
     setNewReward({ name: '', category: '', rarity: 'common', wings_value: 0, season: 'Spring 2025' });
-    alert('Reward created successfully!');
+    alert('Reward creation will be implemented with real data');
   };
 
   const addUser = () => {
@@ -153,34 +152,21 @@ const AdminScreen = () => {
       return;
     }
     
-    const user = { 
-      id: Date.now(), 
-      ...newUser, 
-      status: 'active',
-      joinDate: new Date().toISOString().split('T')[0],
-      lastScan: 'Never',
-      totalScans: 0
-    };
-    setUsers(prev => [...prev, user]);
+    // TODO: Implement real user creation with useAdmin hook
+    console.log('Add user:', newUser);
     setShowAddUserModal(false);
     setNewUser({ name: '', email: '', tier: 'bronze', wings: 0, items: 0 });
-    alert('User added successfully!');
+    alert('User creation will be implemented with real data');
   };
 
   const awardWings = () => {
     if (!selectedUser || wingsAmount <= 0) return;
     
-    setUsers(prev =>
-      prev.map(user =>
-        user.id === selectedUser.id
-          ? { ...user, wings: user.wings + wingsAmount }
-          : user
-      )
-    );
-    
+    // TODO: Implement real wings award with useAdmin hook
+    console.log('Award wings:', { user: selectedUser, amount: wingsAmount });
     setShowAwardWingsModal(false);
     setWingsAmount(0);
-    alert(`Successfully awarded ${wingsAmount} WINGS to ${selectedUser.name}!`);
+    alert(`Wings award will be implemented with real data`);
   };
 
   const filteredUsers = users.filter(user => 
@@ -1035,6 +1021,11 @@ const AdminScreen = () => {
           </div>
         )}
 
+        {/* Admin Management Tab */}
+        {activeTab === 'admin-management' && (
+          <AdminUserManager />
+        )}
+
         {/* Rewards Tab */}
         {activeTab === 'rewards' && (
           <div style={{
@@ -1246,6 +1237,13 @@ const AdminScreen = () => {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Security Tab */}
+        {activeTab === 'security' && (
+          <div>
+            <SecurityDashboard />
           </div>
         )}
 

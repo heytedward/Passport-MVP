@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 
-const pulse = keyframes`
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+const fadeInOut = keyframes`
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 `;
 
 const CountdownContainer = styled.div`
