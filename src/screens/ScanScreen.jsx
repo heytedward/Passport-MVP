@@ -1813,7 +1813,7 @@ const ScanScreen = () => {
                 width: '350px',
                 backdropFilter: 'blur(20px)'
               }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📱</div>
+
                 
                 <h3 style={{ color: '#e74c3c', marginBottom: '1rem', fontSize: '1.2rem' }}>
                   Camera Access Required
@@ -1849,7 +1849,6 @@ const ScanScreen = () => {
             </StateTransition>
           )}
         </StateTransition>
-      )}
 
       {/* Error state */}
       {error && (
