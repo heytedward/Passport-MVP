@@ -1346,10 +1346,11 @@ const ScanScreen = () => {
     }
   }, [handleScanSuccess, simplifiedScanFunction]);
 
-  // Initialize QR scanner - only when explicitly requested
+  // Initialize QR scanner immediately when component loads
   useEffect(() => {
-    if (isScanning && user && !cameraInitialized) {
+    if (user && !cameraInitialized) {
       setCameraInitialized(true);
+      setIsScanning(true);
       // Add a small delay to prevent rapid state changes
       setTimeout(() => {
         startScanning();
@@ -1357,11 +1358,9 @@ const ScanScreen = () => {
     }
     
     return () => {
-      if (!isScanning) {
-        stopScanning();
-      }
+      stopScanning();
     };
-  }, [isScanning, user, cameraInitialized, startScanning]);
+  }, [user, cameraInitialized, startScanning]);
 
   const stopScanning = async () => {
     if (qrCodeScannerRef.current) {
@@ -1380,13 +1379,12 @@ const ScanScreen = () => {
   const handleTryAgain = () => {
     setError(null);
     setCameraError(null);
-    setIsScanning(true);
+    startScanning();
   };
 
   const handleRetryCamera = () => {
     setCameraError(null);
-    setIsScanning(false);
-    setTimeout(() => setIsScanning(true), 100);
+    startScanning();
   };
 
   // Removed testBasicCamera function for streamlined flow
@@ -1451,25 +1449,7 @@ const ScanScreen = () => {
     }
   };
 
-  const handleStartScanning = async () => {
-    setError(null);
-    setCameraError(null);
-    setIsLoading(true); // Show loading during permission request
-    
-    // Start scanning immediately
-    try {
-      await requestCameraPermission();
-      // Add a delay to prevent rapid state changes
-      setTimeout(() => {
-        setIsLoading(false);
-        setIsScanning(true);
-      }, 300);
-    } catch (error) {
-      console.error('Camera permission error:', error);
-      setIsLoading(false);
-      // Let the camera error handling in the UI take care of showing errors
-    }
-  };
+
 
   // Modal handlers
   const handleCloseModal = () => {
@@ -1588,39 +1568,8 @@ const ScanScreen = () => {
   return (
     <Container>
       <>
-        {/* Ready to Scan State */}
-        {!isScanning && (
-          <StateTransition visible={!isScanning}>
-            <ScannerCard>
-              <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🎯</div>
-              <h2 style={{ marginBottom: '1rem', color: '#fff' }}>Ready to Scan</h2>
-              
-              <p style={{ marginBottom: '2.5rem', color: '#ccc', lineHeight: '1.6', fontSize: '1.1rem' }}>
-                Point your camera at a QR code on a Papillon item to earn rewards
-              </p>
-
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                <GlowButton onClick={handleStartScanning} disabled={isLoading}>
-                  {isLoading ? '⏳ Initializing...' : '📱 Start Scanning'}
-                </GlowButton>
-                <GlowButton 
-                  onClick={() => navigate('/')}
-                  style={{ 
-                    background: 'transparent',
-                    borderColor: '#666',
-                    color: '#ccc'
-                  }}
-                  disabled={isLoading}
-                >
-                  Back to Home
-                </GlowButton>
-              </div>
-            </ScannerCard>
-          </StateTransition>
-        )}
-
-        {/* Scanning State */}
-        {isScanning && (
+        {/* Scanning State - Always show this */}
+        <StateTransition visible={true}>
         <StateTransition visible={isScanning}>
           {/* Camera initialization loading state */}
           {isLoading && (
@@ -1686,20 +1635,15 @@ const ScanScreen = () => {
           )}
           */}
 
-              {/* Title overlay */}
+
+
+          {/* Back button */}
           <div style={{
             position: 'absolute',
-            top: '60px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 10,
-            textAlign: 'center',
-            color: '#fff'
+            top: '20px',
+            left: '20px',
+            zIndex: 20
           }}>
-            <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '700' }}>Scan a Papillon Item</h2>
-            <p style={{ margin: '0.5rem 0 0 0', color: '#aaa', fontSize: '1rem' }}>
-              Point your camera at a QR code to earn rewards
-            </p>
           </div>
 
           {/* Camera container */}
@@ -1848,80 +1792,9 @@ const ScanScreen = () => {
           </div>
 
           {/* Cancel button */}
-          <div style={{
-            position: 'absolute',
-            bottom: '120px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 10
-          }}>
-            <GlowButton 
-              onClick={() => navigate('/')}
-              style={{
-                background: 'rgba(0, 0, 0, 0.7)',
-                borderColor: '#666',
-                color: '#fff',
-                backdropFilter: 'blur(10px)'
-              }}
-            >
-              ← Back
-            </GlowButton>
-          </div>
 
-          {/* Camera error overlay */}
-          {cameraError && (
-            <StateTransition visible={true}>
-              <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                zIndex: 15,
-                padding: '2rem',
-                background: 'rgba(18, 18, 18, 0.95)',
-                borderRadius: '16px',
-                border: '2px solid rgba(231, 76, 60, 0.4)',
-                textAlign: 'center',
-                maxWidth: '90vw',
-                width: '350px',
-                backdropFilter: 'blur(20px)'
-              }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📱</div>
-                
-                <h3 style={{ color: '#e74c3c', marginBottom: '1rem', fontSize: '1.2rem' }}>
-                  Camera Access Required
-                </h3>
-                
-                <p style={{ color: '#ccc', marginBottom: '2rem', fontSize: '1rem', lineHeight: '1.4' }}>
-                  {cameraError}
-                </p>
-                
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <GlowButton 
-                    onClick={handleRetryCamera} 
-                    style={{ 
-                      background: '#4C1C8C',
-                      borderColor: '#4C1C8C'
-                    }}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? '⏳ Retrying...' : '🔄 Try Again'}
-                  </GlowButton>
-                  <GlowButton 
-                    onClick={() => navigate('/')} 
-                    style={{ 
-                      background: 'transparent',
-                      borderColor: '#666',
-                      color: '#ccc'
-                    }}
-                    disabled={isLoading}
-                  >
-                    ← Go Back
-                  </GlowButton>
-                </div>
-              </div>
-            </StateTransition>
-          )}
+
+
 
           {/* Camera error state */}
           {cameraError && (
@@ -1950,29 +1823,18 @@ const ScanScreen = () => {
                   {cameraError}
                 </p>
                 
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <GlowButton 
-                    onClick={handleRetryCamera} 
-                    style={{ 
-                      background: '#4C1C8C',
-                      borderColor: '#4C1C8C'
-                    }}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? '⏳ Retrying...' : '🔄 Try Again'}
-                  </GlowButton>
-                  <GlowButton 
-                    onClick={() => navigate('/')} 
-                    style={{ 
-                      background: 'transparent',
-                      borderColor: '#666',
-                      color: '#ccc'
-                    }}
-                    disabled={isLoading}
-                  >
-                    ← Go Back
-                  </GlowButton>
-                </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <GlowButton 
+                      onClick={handleRetryCamera} 
+                      style={{ 
+                        background: '#4C1C8C',
+                        borderColor: '#4C1C8C'
+                      }}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? '⏳ Retrying...' : '🔄 Try Again'}
+                    </GlowButton>
+                  </div>
               </div>
             </StateTransition>
           )}
@@ -2026,8 +1888,7 @@ const ScanScreen = () => {
         />
       )}
       
-      {/* Navigation Bar */}
-      <NavBar />
+        </StateTransition>
       </>
     </Container>
   );

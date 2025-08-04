@@ -165,6 +165,82 @@ export const useQuests = () => {
     }
   }, [quests, user?.id, fetchQuestProgress]);
 
+  // Daily quest completion functions
+  const [todaysCompletions, setTodaysCompletions] = useState(new Set());
+
+  const loadTodaysCompletions = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('daily_completions')
+        .select('quest_type')
+        .eq('user_id', user.id)
+        .gte('completed_at', today);
+
+      if (error) throw error;
+      
+      const completedTypes = new Set(data?.map(item => item.quest_type) || []);
+      setTodaysCompletions(completedTypes);
+      
+    } catch (err) {
+      console.error('Error loading today\'s completions:', err);
+    }
+  }, [user?.id]);
+
+  const markQuestComplete = useCallback(async (questType) => {
+    if (!user?.id) return;
+    
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Check if already completed today
+      const { data: existing } = await supabase
+        .from('daily_completions')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('quest_type', questType)
+        .gte('completed_at', today)
+        .single();
+
+      if (existing) {
+        console.log('Quest already completed today');
+        return;
+      }
+
+      // Record completion
+      const { error: insertError } = await supabase
+        .from('daily_completions')
+        .insert({
+          user_id: user.id,
+          quest_type: questType,
+          completed_at: new Date().toISOString()
+        });
+
+      if (insertError) throw insertError;
+
+      // Award WINGS
+      const { error: wingsError } = await supabase.rpc('add_wings_to_user', {
+        user_id_param: user.id,
+        wings_amount: 10,
+        activity_type_param: 'daily_quest',
+        description_param: `Completed daily quest: ${questType}`
+      });
+
+      if (wingsError) throw wingsError;
+
+      // Update local state
+      setTodaysCompletions(prev => new Set([...prev, questType]));
+      
+      return { success: true, reward: 10 };
+      
+    } catch (err) {
+      console.error('Error marking quest complete:', err);
+      return { success: false, error: err.message };
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     fetchQuestProgress();
   }, [fetchQuestProgress]);
@@ -174,6 +250,9 @@ export const useQuests = () => {
     loading,
     error,
     refresh: fetchQuestProgress,
-    completeQuest
+    completeQuest,
+    todaysCompletions,
+    loadTodaysCompletions,
+    markQuestComplete
   };
 }; 

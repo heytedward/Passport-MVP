@@ -640,92 +640,8 @@ const PassportScreen = () => {
     return themeNames[themeKey] || 'Frequency Pulse';
   };
 
-  // Show loading state
-  if (loading) {
-    return (
-      <Container>
-        <PassportBook 
-          themeKey={equippedTheme}
-          themeGradient={gradientThemes[equippedTheme]?.gradient}
-        >
-          <PassportHeader themeKey={equippedTheme}>
-            <SeasonTitle themeKey={equippedTheme}>Fall 2025 - Digital Genesis</SeasonTitle>
-            <PassportTitle themeKey={equippedTheme}>Find Your Wings</PassportTitle>
-            <PassportSubtitle themeKey={equippedTheme}>
-              {user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Collector'}
-            </PassportSubtitle>
-            <StampsCounter themeKey={equippedTheme}>
-              Loading...
-            </StampsCounter>
-          </PassportHeader>
-          
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            height: '200px',
-            color: '#ccc',
-            fontSize: '1.1rem'
-          }}>
-            Loading your stamps...
-          </div>
-        </PassportBook>
-        <NavBar />
-      </Container>
-    );
-  }
-
-  // Show error state
-  if (error) {
-    return (
-      <Container>
-        <PassportBook 
-          themeKey={equippedTheme}
-          themeGradient={gradientThemes[equippedTheme]?.gradient}
-        >
-          <PassportHeader themeKey={equippedTheme}>
-            <SeasonTitle themeKey={equippedTheme}>Fall 2025 - Digital Genesis</SeasonTitle>
-            <PassportTitle themeKey={equippedTheme}>Find Your Wings</PassportTitle>
-            <PassportSubtitle themeKey={equippedTheme}>
-              {user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Collector'}
-            </PassportSubtitle>
-            <StampsCounter themeKey={equippedTheme}>
-              Error
-            </StampsCounter>
-          </PassportHeader>
-          
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            height: '200px',
-            color: '#e74c3c',
-            fontSize: '1.1rem',
-            textAlign: 'center',
-            gap: '1rem'
-          }}>
-            <div>⚠️ Failed to load stamps</div>
-            <div style={{ fontSize: '0.9rem', color: '#ccc' }}>
-              {error}
-            </div>
-            <GlowButton 
-              onClick={() => window.location.reload()}
-              style={{ 
-                background: '#4C1C8C',
-                borderColor: '#4C1C8C',
-                fontSize: '0.9rem',
-                padding: '0.5rem 1rem'
-              }}
-            >
-              🔄 Retry
-            </GlowButton>
-          </div>
-        </PassportBook>
-        <NavBar />
-      </Container>
-    );
-  }
+  // Always show the passport state, even if loading or error
+  // This ensures users always see their passport structure
 
   return (
     <Container>
@@ -742,7 +658,7 @@ const PassportScreen = () => {
           </PassportSubtitle>
           
           <StampsCounter themeKey={equippedTheme}>
-            {unlockedCount}/{totalCount} • {Math.round((unlockedCount / totalCount) * 100)}%
+            {loading ? 'Loading...' : error ? 'Error' : `${unlockedCount}/${totalCount} • ${Math.round((unlockedCount / totalCount) * 100)}%`}
           </StampsCounter>
           
           <ProgressBar>
@@ -752,6 +668,23 @@ const PassportScreen = () => {
             />
           </ProgressBar>
         </PassportHeader>
+
+        {/* Error indicator - subtle and non-intrusive */}
+        {error && (
+          <div style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            background: 'rgba(231, 76, 60, 0.2)',
+            color: '#e74c3c',
+            padding: '4px 8px',
+            borderRadius: '12px',
+            fontSize: '0.8rem',
+            border: '1px solid rgba(231, 76, 60, 0.3)'
+          }}>
+            Error
+          </div>
+        )}
 
         <StampsGrid>
           {allStamps.map((stamp) => {

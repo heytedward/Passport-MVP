@@ -573,7 +573,10 @@ function HomeScreen() {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                marginLeft: '90px'
+                marginLeft: 'auto',
+                marginRight: '0',
+                position: 'relative',
+                right: '0'
               }}>
                 <div style={{ 
                   fontSize: '2.5rem', 
@@ -613,7 +616,10 @@ function HomeScreen() {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                marginLeft: '90px'
+                marginLeft: 'auto',
+                marginRight: '0',
+                position: 'relative',
+                right: '0'
               }}>
                 <div style={{ 
                   fontSize: '2.5rem', 

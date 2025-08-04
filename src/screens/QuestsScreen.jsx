@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled, { css } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { useQuests } from '../hooks/useQuests';
+import NavBar from '../components/NavBar';
 
 const Container = styled.div`
   height: 100vh;
@@ -467,6 +468,9 @@ const QuestsScreen = () => {
           )}
         </QuestPages>
       </QuestJournal>
+      
+      {/* Navigation Bar */}
+      <NavBar />
     </Container>
   );
 };
