@@ -1834,6 +1834,16 @@ const ScanScreen = () => {
                     >
                       {isLoading ? '⏳ Retrying...' : '🔄 Try Again'}
                     </GlowButton>
+                    <GlowButton
+                      onClick={() => navigate('/')}
+                      style={{
+                        background: 'transparent',
+                        borderColor: '#666',
+                        color: '#ccc'
+                      }}
+                    >
+                      ← Back
+                    </GlowButton>
                   </div>
               </div>
             </StateTransition>
