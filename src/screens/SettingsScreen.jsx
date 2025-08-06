@@ -4,12 +4,12 @@ import GlassCard from '../components/GlassCard';
 
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { useThemes } from '../hooks/useThemes';
-import { gradientThemes } from '../styles/theme';
 import { performAuthCleanup, forcePageReload, emergencyCleanup } from '../utils/authCleanup';
 
 import { supabase } from '../utils/supabaseClient';
 import AvatarUpload from '../components/AvatarUpload';
+import ThemeTestingSection from '../components/ThemeTestingSection';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -17,15 +17,20 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 48px 8px 120px 8px;
+  justify-content: flex-start;
+  padding: 20px 16px 120px 16px;
   position: relative;
+  
+  @media (max-width: 768px) {
+    padding: 16px 12px 100px 12px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 12px 8px 80px 8px;
+  }
 `;
 
 const BackButton = styled.button`
-  position: absolute;
-  top: 20px;
-  left: 20px;
   background: linear-gradient(135deg, #FFB000 0%, #FF9F1C 100%);
   color: #000;
   border: none;
@@ -37,11 +42,45 @@ const BackButton = styled.button`
   align-items: center;
   gap: 8px;
   transition: all 0.2s ease;
-  z-index: 100;
+  font-size: 1rem;
+  width: 100%;
+  justify-content: center;
+  margin-top: 24px;
+  
+  @media (max-width: 768px) {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    margin-top: 20px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 12px 18px;
+    font-size: 0.85rem;
+    margin-top: 16px;
+  }
   
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(255, 176, 0, 0.3);
+  }
+`;
+
+const PageTitle = styled.h1`
+  font-family: ${({ theme }) => theme.typography.fontFamily.heading};
+  font-size: 2rem;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin: 60px 0 32px 0;
+  text-align: center;
+  
+  @media (max-width: 768px) {
+    font-size: 1.75rem;
+    margin: 50px 0 24px 0;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 1.5rem;
+    margin: 40px 0 20px 0;
   }
 `;
 
@@ -60,6 +99,16 @@ const AccordionSection = styled(GlassCard)`
     0 0 20px 0 rgba(255,215,0,0.2),
     0 0 40px 0 rgba(255,215,0,0.1),
     inset 0 1px 0 rgba(255,215,0,0.15);
+  
+  @media (max-width: 768px) {
+    margin-bottom: 20px;
+    border-radius: 16px;
+  }
+  
+  @media (max-width: 480px) {
+    margin-bottom: 16px;
+    border-radius: 14px;
+  }
 `;
 
 const AccordionHeader = styled.button`
@@ -77,6 +126,17 @@ const AccordionHeader = styled.button`
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
+  
+  @media (max-width: 768px) {
+    padding: 20px 24px;
+    font-size: 1.1rem;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 18px 20px;
+    font-size: 1rem;
+  }
+  
   &:hover, &:focus {
     background: ${({ theme }) => theme.colors.glass};
   }
@@ -86,6 +146,15 @@ const AccordionContent = styled.div`
   padding: 0 28px 24px 28px;
   background: none;
   animation: fadeIn 0.3s;
+  
+  @media (max-width: 768px) {
+    padding: 0 24px 20px 24px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 0 20px 16px 20px;
+  }
+  
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-8px); }
     to { opacity: 1; transform: translateY(0); }
@@ -98,11 +167,34 @@ const SettingRow = styled.div`
   justify-content: space-between;
   margin-bottom: 18px;
   gap: 18px;
+  
+  @media (max-width: 768px) {
+    margin-bottom: 16px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  
+  @media (max-width: 480px) {
+    margin-bottom: 14px;
+    gap: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
 `;
 
 const Label = styled.label`
   font-size: 1.08rem;
   color: ${({ theme }) => theme.colors.text.primary};
+  font-weight: 500;
+  
+  @media (max-width: 768px) {
+    font-size: 1rem;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.95rem;
+    width: 100%;
+  }
 `;
 
 const Input = styled.input`
@@ -113,6 +205,19 @@ const Input = styled.input`
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.text.primary};
   transition: all 0.2s ease;
+  max-width: 200px;
+  
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    padding: 6px 10px;
+    max-width: 180px;
+  }
+  
+  @media (max-width: 480px) {
+    font-size: 0.95rem;
+    padding: 8px 12px;
+    max-width: 160px;
+  }
   
   &:focus {
     outline: none;
@@ -129,9 +234,12 @@ const Toggle = styled.input.attrs({ type: 'checkbox' })`
   width: 40px;
   height: 22px;
   accent-color: ${({ theme }) => theme.colors.accent};
+  
+  @media (max-width: 480px) {
+    width: 36px;
+    height: 20px;
+  }
 `;
-
-
 
 const Button = styled.button`
   background: ${({ theme }) => theme.gradients.primary};
@@ -142,71 +250,105 @@ const Button = styled.button`
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
+  
+  @media (max-width: 768px) {
+    padding: 6px 14px;
+    font-size: 0.9rem;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    width: 100%;
+  }
+  
   &:hover, &:focus {
     background: ${({ theme }) => theme.gradients.gold};
     outline: none;
+    transform: translateY(-1px);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
   }
 `;
 
 
 
-const GradientSwatchRow = styled.div`
-  display: flex;
-  gap: 14px;
-  margin-top: 12px;
-  margin-bottom: 6px;
-`;
-
-const GradientSwatch = styled.button`
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  border: 3px solid transparent;
-  background: ${({ gradient }) => gradient};
-  box-shadow: 
-    0 0 12px 0 rgba(255,215,0,0.15),
-    0 0 24px 0 rgba(255,215,0,0.08),
-    inset 0 1px 0 rgba(255,215,0,0.1);
+const PencilIconButton = styled.button`
+  background: ${({ theme }) => theme.gradients.primary};
+  color: ${({ theme }) => theme.colors.text.primary};
+  border: none;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 1rem;
   cursor: pointer;
-  outline: none;
-  transition: border 0.2s, box-shadow 0.2s, transform 0.15s;
-  position: relative;
-  &:hover, &:focus {
-    border-color: ${({ theme }) => theme.colors.highlight};
-    transform: scale(1.06);
-    box-shadow: 
-      0 0 20px 0 rgba(255,215,0,0.3),
-      0 0 40px 0 rgba(255,215,0,0.15),
-      inset 0 1px 0 rgba(255,215,0,0.2);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  
+  @media (max-width: 768px) {
+    padding: 6px;
+    font-size: 0.9rem;
+    min-width: 32px;
+    height: 32px;
   }
-  ${({ selected, theme }) => selected && `
-    border-color: ${theme.colors.highlight};
-    box-shadow: 
-      0 0 24px 0 rgba(255,215,0,0.4),
-      0 0 48px 0 rgba(255,215,0,0.2),
-      inset 0 1px 0 rgba(255,215,0,0.3);
-    &::after {
-      content: '';
-      position: absolute;
-      top: 6px; right: 6px;
-      width: 12px; height: 12px;
-      border-radius: 50%;
-      background: ${theme.colors.highlight};
-      box-shadow: 0 0 8px 2px ${theme.colors.highlight}55;
-    }
-  `}
+  
+  @media (max-width: 480px) {
+    padding: 8px;
+    font-size: 0.85rem;
+    min-width: 36px;
+    height: 36px;
+  }
+  
+  &:hover, &:focus {
+    background: ${({ theme }) => theme.gradients.gold};
+    outline: none;
+    transform: translateY(-1px);
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
 `;
 
-const SwatchLabel = styled.div`
-  font-size: 0.82rem;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  text-align: center;
-  margin-top: 2px;
-  max-width: 60px;
+const SignOutButton = styled(Button)`
+  width: 100%;
+  background: linear-gradient(135deg, rgba(231, 76, 60, 0.8) 0%, rgba(192, 57, 43, 0.8) 100%);
+  border: 2px solid rgba(231, 76, 60, 0.3);
+  color: #fff;
+  font-weight: 700;
+  margin-top: 16px;
+  
+  &:hover {
+    background: linear-gradient(135deg, rgba(231, 76, 60, 1) 0%, rgba(192, 57, 43, 1) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+  }
 `;
 
-
+const UserInfo = styled.div`
+  margin-bottom: 16px;
+  color: #fff;
+  font-size: 0.9rem;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  
+  @media (max-width: 480px) {
+    font-size: 0.85rem;
+    padding: 10px;
+  }
+`;
 
 const SettingsScreen = ({ 
   themeMode = process.env.REACT_APP_DEFAULT_THEME_MODE || 'dark', 
@@ -214,8 +356,7 @@ const SettingsScreen = ({
   gradientKey = process.env.REACT_APP_DEFAULT_GRADIENT || 'monarch', 
   onGradientChange = () => {} 
 }) => {
-  const { user, signOut, profile, refreshProfile } = useAuth();
-  const { ownedThemes, equippedTheme, equipTheme, checkThemeOwnership } = useThemes();
+  const { user, signOut, profile, refreshProfile, avatarUrl } = useAuth();
   const [open, setOpen] = useState('account');
   const [displayName, setDisplayName] = useState('');
   const [originalDisplayName, setOriginalDisplayName] = useState('');
@@ -230,17 +371,13 @@ const SettingsScreen = ({
       setDisplayName(name);
       setOriginalDisplayName(name);
       
-      // Set avatar from profile if available
-      if (profile?.avatar_url) {
-        setAvatar(profile.avatar_url);
-      } else {
-        setAvatar(null);
-      }
+      // Set avatar from useAuth context (which handles fallback hierarchy)
+      setAvatar(avatarUrl);
 
       // Ensure profile exists in database
       ensureProfileExists();
     }
-  }, [user, profile]);
+  }, [user, profile, avatarUrl]);
 
   const ensureProfileExists = async () => {
     if (!user || profile) return; // Skip if user doesn't exist or profile already exists
@@ -270,10 +407,7 @@ const SettingsScreen = ({
     }
   };
 
-  // Remove loadUserProfile function since we're now using the profile from useAuth
   const navigate = useNavigate();
-
-
 
   const handleLogout = async () => {
     try {
@@ -343,40 +477,10 @@ const SettingsScreen = ({
     navigate('/login');
   };
 
-  const unlockAllThemes = async () => {
-    if (!user) return;
-    
-    try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          themes_unlocked: ['frequencyPulse', 'solarShine', 'echoGlass', 'retroFrame', 'nightScan'],
-          equipped_theme: 'frequencyPulse',
-          total_scans: 50,
-          total_quests_completed: 20,
-          total_items_collected: 25,
-          wings_balance: 1500
-        })
-        .eq('id', user.id);
-
-      if (error) {
-        console.error('Error unlocking themes:', error);
-        alert('Error unlocking themes: ' + error.message);
-      } else {
-        alert('✅ All themes unlocked! Go to /closet to see them.');
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error: ' + error.message);
-    }
-  };
-
-
   return (
     <Container>
-      <BackButton onClick={() => navigate('/profile')}>
-        ← Back to Profile
-      </BackButton>
+      <PageTitle>Account & Profile</PageTitle>
+      
       <Accordion>
         <AccordionSection>
           <AccordionHeader
@@ -388,39 +492,38 @@ const SettingsScreen = ({
           </AccordionHeader>
           {open === 'account' && (
             <AccordionContent>
-              <SettingRow>
-                <Label>Profile Picture</Label>
+              <SettingRow style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                <Label style={{ marginBottom: '12px' }}>Profile Picture</Label>
                 <AvatarUpload
-  userId={user?.id}
-  currentAvatarUrl={avatar}
-  onAvatarUpdate={async (newAvatarUrl) => {
-    console.log('🔄 Avatar updated, syncing state...', newAvatarUrl);
-    
-    // Update local state immediately
-    setAvatar(newAvatarUrl);
-    
-    // Refresh the global profile state
-    try {
-      await refreshProfile();
-      console.log('✅ Profile refreshed successfully');
-    } catch (error) {
-      console.error('❌ Failed to refresh profile:', error);
-    }
-    
-    // Force a small delay to ensure state propagation
-    setTimeout(() => {
-      console.log('🔄 State sync complete');
-    }, 500);
-  }}
-  size={80}
-  showButton={true}
-/>
+                  userId={user?.id}
+                  currentAvatarUrl={avatarUrl}
+                  onAvatarUpdate={async (newAvatarUrl) => {
+                    console.log('🔄 Avatar updated, syncing state...', newAvatarUrl);
+                    
+                    // Update local state immediately
+                    setAvatar(newAvatarUrl);
+                    
+                    // Refresh the global profile state
+                    try {
+                      await refreshProfile();
+                      console.log('✅ Profile refreshed successfully');
+                    } catch (error) {
+                      console.error('❌ Failed to refresh profile:', error);
+                    }
+                    
+                    // Force a small delay to ensure state propagation
+                    setTimeout(() => {
+                      console.log('🔄 State sync complete');
+                    }, 500);
+                  }}
+                  size={80}
+                  showButton={true}
+                />
               </SettingRow>
+              
               <SettingRow>
-                <Label htmlFor="displayName">
-                  Display Name
-                </Label>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <Label htmlFor="displayName">Display Name</Label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
                   <Input
                     id="displayName"
                     value={displayName}
@@ -450,7 +553,7 @@ const SettingsScreen = ({
                       cursor: isEditingDisplayName ? 'text' : 'default'
                     }}
                   />
-                  <Button 
+                  <PencilIconButton 
                     type="button" 
                     onClick={async () => {
                       if (!isEditingDisplayName) {
@@ -490,8 +593,6 @@ const SettingsScreen = ({
                       }
                     }}
                     style={{ 
-                      padding: '8px 16px', 
-                      fontSize: '0.9rem',
                       background: isEditingDisplayName && displayName !== originalDisplayName
                         ? 'rgba(255, 215, 0, 0.3)' 
                         : 'rgba(255, 215, 0, 0.2)',
@@ -502,15 +603,20 @@ const SettingsScreen = ({
                       fontWeight: isEditingDisplayName && displayName !== originalDisplayName ? 'bold' : 'normal'
                     }}
                     disabled={isEditingDisplayName && displayName === originalDisplayName}
+                    title={isEditingDisplayName ? (displayName !== originalDisplayName ? 'Save' : 'Cancel') : 'Edit'}
                   >
-                    {isEditingDisplayName ? (displayName !== originalDisplayName ? 'Save' : 'Cancel') : 'Change'}
-                  </Button>
+                    {isEditingDisplayName ? (displayName !== originalDisplayName ? '✓' : '✕') : '✏️'}
+                  </PencilIconButton>
                 </div>
               </SettingRow>
+              
               <SettingRow>
                 <Label>Email</Label>
-                <span>{user?.email || 'Not logged in'}</span>
+                <span style={{ color: '#FFB000', textDecoration: 'underline' }}>
+                  {user?.email || 'Not logged in'}
+                </span>
               </SettingRow>
+              
               <SettingRow>
                 <Label htmlFor="emailPref">Email Preferences</Label>
                 <Toggle
@@ -519,54 +625,28 @@ const SettingsScreen = ({
                   onChange={e => setEmailPref(e.target.checked)}
                 />
               </SettingRow>
+              
               <SettingRow>
                 <Label>Password/Security</Label>
                 <Button type="button">Change Password</Button>
               </SettingRow>
 
-
-
               {user ? (
                 <div>
-                  <div style={{ marginBottom: '1rem', color: '#fff', fontSize: '0.9rem' }}>
+                  <UserInfo>
                     <strong>Logged in as:</strong> {user.email}
-                  </div>
+                  </UserInfo>
                   
                   {/* Theme Testing Section */}
-                  <div style={{ 
-                    marginBottom: '1rem', 
-                    padding: '1rem', 
-                    background: 'rgba(255, 176, 0, 0.1)', 
-                    border: '1px solid rgba(255, 176, 0, 0.3)', 
-                    borderRadius: '8px' 
-                  }}>
-                    <div style={{ marginBottom: '0.5rem', color: '#FFB000', fontWeight: 'bold' }}>
-                      🎨 Theme Testing
-                    </div>
-                    <Button
-                      onClick={unlockAllThemes}
-                      style={{ 
-                        width: '100%', 
-                        background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
-                        border: 'none',
-                        color: '#fff',
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      🎁 Unlock All Themes for Testing
-                    </Button>
-                  </div>
+                  <ErrorBoundary>
+                    <ThemeTestingSection />
+                  </ErrorBoundary>
                   
-                  <Button
-                    style={{ marginTop: 12, width: '100%', background: 'rgba(231, 76, 60, 0.2)', borderColor: 'rgba(231, 76, 60, 0.3)' }}
-                    onClick={() => {
-                      console.log('🔄 Sign out button clicked!');
-                      alert('Sign out button clicked!');
-                      handleLogout();
-                    }}
+                  <SignOutButton
+                    onClick={handleLogout}
                   >
                     Sign Out
-                  </Button>
+                  </SignOutButton>
                 </div>
               ) : (
                 <Button
@@ -579,6 +659,7 @@ const SettingsScreen = ({
             </AccordionContent>
           )}
         </AccordionSection>
+        
         <AccordionSection>
           <AccordionHeader
             aria-expanded={open === 'theme'}
@@ -597,10 +678,14 @@ const SettingsScreen = ({
                   onChange={onToggleTheme}
                 />
               </SettingRow>
-
             </AccordionContent>
           )}
         </AccordionSection>
+        
+        {/* Back Button at the bottom */}
+        <BackButton onClick={() => navigate('/profile')}>
+          ← Back to Profile
+        </BackButton>
       </Accordion>
     </Container>
   );

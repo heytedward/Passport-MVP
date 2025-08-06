@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../hooks/useAuth';
-import { useThemes } from '../hooks/useThemes';
+import { useTheme } from '../hooks/useTheme';
 import { progressTracker } from '../utils/progressTracker';
 import { supabase } from '../utils/supabaseClient';
 import GlassCard from './GlassCard';
@@ -133,12 +133,11 @@ const ThemeProgressTester = () => {
   const { user } = useAuth();
   const { 
     ownedThemes, 
-    equippedTheme, 
-    userProgress, 
-    equipTheme, 
-    checkThemeOwnership,
+    currentTheme, 
+    switchTheme, 
+    ownsTheme,
     loading: themesLoading 
-  } = useThemes();
+  } = useTheme();
   
   const [status, setStatus] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);

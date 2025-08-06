@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useStamps } from '../hooks/useStamps';
-import { useThemes } from '../hooks/useThemes';
+import { useTheme } from '../hooks/useTheme';
 import { gradientThemes } from '../styles/theme';
 import FlippableCard from '../components/FlippableCard';
 import GlowButton from '../components/GlowButton';
@@ -567,24 +567,52 @@ const PassportScreen = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { stamps, loading, error, unlockedCount, totalCount } = useStamps();
-  const { equippedTheme } = useThemes();
+  const { currentTheme } = useTheme();
   const [selectedStamp, setSelectedStamp] = useState(null);
+
+  // DEMO MODE: Force 11% view with sample stamps
+  const DEMO_MODE = true; // Set to false to return to normal
+
+  const demoStamps = [
+    { 
+      stamp_id: 'received_passport', 
+      unlocked: true, 
+      earnedAt: '2025-03-01T00:00:00Z',
+      stamp_type: 'achievement',
+      rarity: 'common'
+    }
+  ];
+
+  const demoStats = {
+    unlockedCount: 1,
+    totalCount: 9, // This gives us 11% (1/9 = 11.1%)
+    loading: false,
+    error: null
+  };
+
+  // Use demo data if in demo mode
+  const displayStamps = DEMO_MODE ? demoStamps : stamps;
+  const displayUnlockedCount = DEMO_MODE ? demoStats.unlockedCount : unlockedCount;
+  const displayTotalCount = DEMO_MODE ? demoStats.totalCount : totalCount;
+  const displayLoading = DEMO_MODE ? demoStats.loading : loading;
+  const displayError = DEMO_MODE ? demoStats.error : error;
 
   // Debug theme system
   useEffect(() => {
-    console.log('PassportScreen - Current equipped theme:', equippedTheme);
-  }, [equippedTheme]);
+      console.log('PassportScreen - Current equipped theme:', currentTheme);
+}, [currentTheme]);
 
   // Debug stamps data
   useEffect(() => {
     console.log('PassportScreen - Stamps data:', {
-      totalStamps: stamps?.length,
-      unlockedCount,
-      totalCount,
-      loading,
-      error
+      totalStamps: displayStamps?.length,
+      unlockedCount: displayUnlockedCount,
+      totalCount: displayTotalCount,
+      loading: displayLoading,
+      error: displayError,
+      demoMode: DEMO_MODE
     });
-  }, [stamps, unlockedCount, totalCount, loading, error]);
+  }, [displayStamps, displayUnlockedCount, displayTotalCount, displayLoading, displayError, DEMO_MODE]);
 
   // Define all possible stamps for the 3x3 grid with proper mapping to useStamps data
   const allStamps = [
@@ -599,8 +627,8 @@ const PassportScreen = () => {
     { id: 'master_collector', name: 'Master', icon: '👑', description: 'All Stamps', rarity: 'Legendary' }
   ];
 
-  // Get earned stamps from useStamps hook
-  const earnedStamps = stamps?.reduce((acc, stamp) => {
+  // Get earned stamps from useStamps hook (or demo data)
+  const earnedStamps = displayStamps?.reduce((acc, stamp) => {
     if (stamp.unlocked) {
       acc[stamp.stamp_id] = {
         earned_at: stamp.earnedAt,
@@ -646,31 +674,31 @@ const PassportScreen = () => {
   return (
     <Container>
       <PassportBook 
-        themeKey={equippedTheme}
-        themeGradient={gradientThemes[equippedTheme]?.gradient}
+        themeKey={currentTheme}
+        themeGradient={gradientThemes[currentTheme]?.gradient}
       >
         
-        <PassportHeader themeKey={equippedTheme}>
-          <SeasonTitle themeKey={equippedTheme}>Fall 2025 - Digital Genesis</SeasonTitle>
-          <PassportTitle themeKey={equippedTheme}>Find Your Wings</PassportTitle>
-          <PassportSubtitle themeKey={equippedTheme}>
+        <PassportHeader themeKey={currentTheme}>
+          <SeasonTitle themeKey={currentTheme}>Fall 2025 - Digital Genesis</SeasonTitle>
+          <PassportTitle themeKey={currentTheme}>Find Your Wings</PassportTitle>
+          <PassportSubtitle themeKey={currentTheme}>
             {user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Collector'}
           </PassportSubtitle>
           
-          <StampsCounter themeKey={equippedTheme}>
-            {loading ? 'Loading...' : error ? 'Error' : `${unlockedCount}/${totalCount} • ${Math.round((unlockedCount / totalCount) * 100)}%`}
+          <StampsCounter themeKey={currentTheme}>
+            {displayLoading ? 'Loading...' : displayError ? 'Error' : `${displayUnlockedCount}/${displayTotalCount} • ${Math.round((displayUnlockedCount / displayTotalCount) * 100)}%`}
           </StampsCounter>
           
           <ProgressBar>
             <ProgressFill 
-              progress={Math.round((unlockedCount / totalCount) * 100)} 
-              themeKey={equippedTheme}
+              progress={Math.round((displayUnlockedCount / displayTotalCount) * 100)} 
+              themeKey={currentTheme}
             />
           </ProgressBar>
         </PassportHeader>
 
         {/* Error indicator - subtle and non-intrusive */}
-        {error && (
+        {displayError && (
           <div style={{
             position: 'absolute',
             top: '10px',
@@ -695,7 +723,7 @@ const PassportScreen = () => {
               <StampSlot 
                 key={stamp.id} 
                 hasStamp={hasStamp}
-                themeKey={equippedTheme}
+                themeKey={currentTheme}
                 onClick={() => handleStampClick(stamp)}
                 title={hasStamp ? `${stamp.name} - Earned ${new Date(earnedStamps[stamp.id].earned_at).toLocaleDateString()}` : `${stamp.name} - ${stamp.description}`}
               >
@@ -741,8 +769,8 @@ const PassportScreen = () => {
           })}
         </StampsGrid>
         
-        <ThemeIndicator themeKey={equippedTheme}>
-          Theme: {getThemeName(equippedTheme)}
+        <ThemeIndicator themeKey={currentTheme}>
+          Theme: {getThemeName(currentTheme)}
         </ThemeIndicator>
       </PassportBook>
 

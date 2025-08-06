@@ -3,6 +3,16 @@ import { supabase } from '../utils/supabaseClient';
 import { useAuth } from './useAuth';
 import { STAMP_IMAGES } from '../utils/stampImages';
 
+// Timeout wrapper for database calls
+const withTimeout = (promise, ms = 3000) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database timeout')), ms)
+    )
+  ]);
+};
+
 // Complete 9 stamps for perfect 3x3 grid
 export const STAMPS = [
   { 
@@ -112,28 +122,30 @@ export const useStamps = () => {
       setError(null);
       console.log('🔍 Starting database query for user stamps...');
 
-      // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database query timeout')), 8000)
+      const { data, error } = await withTimeout(
+        supabase
+          .from('user_stamps')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
+        2000 // 2 second timeout
       );
 
-      const queryPromise = supabase
-        .from('user_stamps')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      const { data, error: fetchError } = await Promise.race([queryPromise, timeoutPromise]);
-
-      if (fetchError) throw fetchError;
+      if (error) {
+        console.warn('⚠️ Stamps database timeout, using fallback');
+        // Set default stamps to prevent blocking
+        setUserStamps([]);
+        setError(null); // Don't show error for timeouts
+        return;
+      }
 
       setUserStamps(data || []);
       console.log('✅ User stamps loaded successfully:', data?.length || 0, 'stamps');
     } catch (err) {
-      console.error('❌ Error loading user stamps:', err);
-      setError(err.message);
-      // Set empty array on error so UI can still function
+      console.warn('⚠️ Stamps loading failed:', err);
+      // Fallback data
       setUserStamps([]);
+      setError(null); // Don't show error for timeouts
     } finally {
       setLoading(false);
     }

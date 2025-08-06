@@ -1,6 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
-import { supabase } from '../utils/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
+import { useAuth } from '../hooks/useAuth';
+
+const supabase = createClient(
+  process.env.REACT_APP_SUPABASE_URL,
+  process.env.REACT_APP_SUPABASE_ANON_KEY
+);
 
 const AvatarContainer = styled.div`
   display: flex;
@@ -11,19 +17,11 @@ const AvatarContainer = styled.div`
 
 const AvatarWrapper = styled.div`
   position: relative;
-  width: 120px;
-  height: 120px;
   border-radius: 50%;
   overflow: hidden;
   background: linear-gradient(135deg, #1a1a2e, #16213e);
-  border: 3px solid #FFB000;
-  box-shadow: 0 0 20px rgba(255, 176, 0, 0.3);
-  transition: all 0.3s ease;
-
-  &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 30px rgba(255, 176, 0, 0.5);
-  }
+  border: 2px solid #FFB000;
+  box-shadow: 0 0 10px rgba(255, 176, 0, 0.2);
 `;
 
 const AvatarImage = styled.img`
@@ -39,7 +37,7 @@ const AvatarPlaceholder = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 3rem;
+  font-size: ${props => Math.max(20, props.size * 0.4)}px;
   color: #FFB000;
   background: linear-gradient(135deg, #1a1a2e, #16213e);
 `;
@@ -54,26 +52,26 @@ const LoadingOverlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #FFB000;
   font-size: 1.5rem;
+  color: #FFB000;
   border-radius: 50%;
 `;
 
 const UploadButton = styled.button`
-  background: linear-gradient(135deg, #FFB000, #FF8C00);
-  color: #1a1a2e;
+  background: linear-gradient(135deg, #FFB000, #FFCA28);
+  color: #000;
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 25px;
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: bold;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(255, 176, 0, 0.3);
+  font-size: 0.9rem;
+  min-width: 120px;
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 176, 0, 0.4);
+    box-shadow: 0 4px 12px rgba(255, 176, 0, 0.3);
   }
 
   &:disabled {
@@ -116,6 +114,7 @@ const AvatarUpload = ({
   size = 120,
   showButton = true 
 }) => {
+  const { refreshProfile, updateAvatarUrl, refreshAvatarUrl } = useAuth();
   const [avatar, setAvatar] = useState(currentAvatarUrl);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -147,9 +146,11 @@ const AvatarUpload = ({
       setError('');
       setSuccess('');
 
+      console.log('🦋 Starting avatar upload for user:', userId);
+
       // Add timeout to prevent stuck loading state
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Upload timeout - please try again')), 30000); // Increased to 30 seconds
+        setTimeout(() => reject(new Error('Upload timeout - please try again')), 30000);
       });
 
       // Validate file
@@ -160,10 +161,12 @@ const AvatarUpload = ({
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
 
-      console.log('Starting avatar upload...', { fileName, filePath });
+      console.log('📁 Upload parameters:', { fileName, filePath });
 
       // Upload to Supabase storage with timeout
       const uploadPromise = (async () => {
+        console.log('🚀 Uploading to Supabase storage...');
+        
         const { error: uploadError } = await supabase.storage
           .from('avatars')
           .upload(filePath, file, {
@@ -172,52 +175,78 @@ const AvatarUpload = ({
           });
 
         if (uploadError) {
-          console.error('Upload error:', uploadError);
-          throw new Error(uploadError.message);
+          console.error('❌ Storage upload error:', uploadError);
+          throw new Error(`Storage upload failed: ${uploadError.message}`);
         }
+
+        console.log('✅ File uploaded to storage successfully');
 
         // Get public URL
         const { data } = supabase.storage
           .from('avatars')
           .getPublicUrl(filePath);
 
-        console.log('Avatar uploaded successfully:', data.publicUrl);
+        const publicUrl = data.publicUrl;
+        console.log('🔗 Public URL generated:', publicUrl);
 
-        // Update user profile with new avatar URL (create if doesn't exist)
-        const { error: updateError } = await supabase
+        // Update user profile with new avatar URL
+        console.log('💾 Updating user profile in database...');
+        
+        const { data: updateData, error: updateError } = await supabase
           .from('user_profiles')
           .upsert({ 
             id: userId,
-            avatar_url: data.publicUrl,
-            email: (await supabase.auth.getUser()).data.user?.email,
-            username: (await supabase.auth.getUser()).data.user?.user_metadata?.username || (await supabase.auth.getUser()).data.user?.email,
-            display_name: (await supabase.auth.getUser()).data.user?.user_metadata?.username || (await supabase.auth.getUser()).data.user?.email,
+            avatar_url: publicUrl,
             updated_at: new Date().toISOString()
-          });
+          }, {
+            onConflict: 'id'
+          })
+          .select();
 
         if (updateError) {
-          console.error('Profile update error:', updateError);
-          // Provide more specific error message based on the error type
+          console.error('❌ Database update error:', updateError);
+          
+          // Provide specific error messages
           if (updateError.code === '42501') {
             throw new Error('Permission denied - please contact support');
           } else if (updateError.code === '23505') {
             throw new Error('Profile already exists - please try again');
           } else {
-            throw new Error(`Failed to update profile: ${updateError.message}`);
+            throw new Error(`Database update failed: ${updateError.message}`);
           }
         }
 
-        return data.publicUrl;
+        console.log('✅ Database updated successfully:', updateData);
+
+        return publicUrl;
       })();
 
       const publicUrl = await Promise.race([uploadPromise, timeoutPromise]);
 
-      // Update local state
+      // Update local state immediately
       setAvatar(publicUrl);
       setSuccess('Profile picture updated successfully! 🦋');
 
+      // Update useAuth context immediately
+      console.log('🔄 Updating useAuth context...');
+      updateAvatarUrl(publicUrl);
+
+      // Refresh the auth context to ensure consistency
+      console.log('🔄 Refreshing auth context...');
+      try {
+        await refreshProfile();
+        console.log('✅ Auth context refreshed');
+      } catch (refreshError) {
+        console.warn('⚠️ Failed to refresh auth context:', refreshError);
+      }
+
+      // Refresh avatar URL with cache busting
+      console.log('🔄 Refreshing avatar URL with cache busting...');
+      refreshAvatarUrl();
+
       // Call callback if provided
       if (onAvatarUpdate) {
+        console.log('📞 Calling onAvatarUpdate callback...');
         onAvatarUpdate(publicUrl);
       }
 
@@ -225,7 +254,7 @@ const AvatarUpload = ({
       setTimeout(() => setSuccess(''), 3000);
 
     } catch (error) {
-      console.error('Avatar upload error:', error);
+      console.error('💥 Avatar upload error:', error);
       setError(error.message || 'Failed to upload image. Please try again.');
       
       // Clear error after 5 seconds
@@ -258,7 +287,7 @@ const AvatarUpload = ({
             onError={() => setAvatar(null)}
           />
         ) : (
-          <AvatarPlaceholder>🦋</AvatarPlaceholder>
+          <AvatarPlaceholder size={size}>🦋</AvatarPlaceholder>
         )}
         
         {isLoading && (

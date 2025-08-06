@@ -122,6 +122,155 @@ export class PerformanceCache {
   }
 }
 
+// Database query optimization utilities
+export class DatabaseOptimizer {
+  constructor() {
+    this.queryCache = new PerformanceCache(50);
+    this.batchQueries = new Map();
+    this.pendingQueries = [];
+  }
+
+  // Optimize closet query with batching
+  static optimizeClosetQuery(userId) {
+    return {
+      query: `
+        SELECT 
+          uc.id,
+          uc.reward_id,
+          uc.name,
+          uc.rarity,
+          uc.category,
+          uc.mint_number,
+          uc.wings_earned,
+          uc.earned_date,
+          uc.earned_via,
+          uc.is_equipped,
+          r.description,
+          r.wings_value,
+          r.season,
+          r.image_url,
+          r.is_active
+        FROM user_closet uc
+        LEFT JOIN rewards r ON uc.reward_id = r.reward_id
+        WHERE uc.user_id = $1
+        ORDER BY uc.earned_date DESC
+      `,
+      params: [userId],
+      cacheKey: `closet_${userId}`,
+      cacheTTL: 120000 // 2 minutes
+    };
+  }
+
+  // Optimize theme query with batching
+  static optimizeThemeQuery(userId) {
+    return {
+      query: `
+        SELECT 
+          themes_unlocked,
+          equipped_theme,
+          total_scans,
+          total_quests_completed,
+          total_items_collected,
+          wings_balance
+        FROM user_profiles
+        WHERE id = $1
+      `,
+      params: [userId],
+      cacheKey: `themes_${userId}`,
+      cacheTTL: 120000 // 2 minutes
+    };
+  }
+
+  // Batch multiple queries for better performance
+  static batchQueries(queries) {
+    const batchKey = queries.map(q => q.cacheKey).join('_');
+    const batchQuery = {
+      query: queries.map(q => q.query).join('; '),
+      params: queries.flatMap(q => q.params),
+      cacheKey: batchKey,
+      cacheTTL: Math.min(...queries.map(q => q.cacheTTL))
+    };
+    return batchQuery;
+  }
+
+  // Prefetch critical data
+  static prefetchCriticalData(userId) {
+    const queries = [
+      this.optimizeClosetQuery(userId),
+      this.optimizeThemeQuery(userId)
+    ];
+    
+    return this.batchQueries(queries);
+  }
+}
+
+// React component optimization utilities
+export class ReactOptimizer {
+  // Memoize expensive calculations
+  static memoizeExpensiveCalculation(calculation, dependencies) {
+    const cache = new Map();
+    
+    return (...args) => {
+      const key = JSON.stringify(args);
+      if (cache.has(key)) {
+        return cache.get(key);
+      }
+      
+      const result = calculation(...args);
+      cache.set(key, result);
+      return result;
+    };
+  }
+
+  // Optimize list rendering with virtualization
+  static createVirtualizedList(items, itemHeight = 100, containerHeight = 400) {
+    const visibleCount = Math.ceil(containerHeight / itemHeight);
+    const totalHeight = items.length * itemHeight;
+    
+    return {
+      visibleItems: items.slice(0, visibleCount),
+      totalHeight,
+      itemHeight,
+      visibleCount
+    };
+  }
+
+  // Optimize image loading
+  static createImageLoader(options = {}) {
+    const {
+      preloadCount = 3,
+      lazyLoadThreshold = 100
+    } = options;
+
+    return {
+      preloadImages: (images) => {
+        return images.slice(0, preloadCount).map(src => {
+          const img = new Image();
+          img.src = src;
+          return img;
+        });
+      },
+      
+      lazyLoadImages: (images, callback) => {
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const img = entry.target;
+              img.src = img.dataset.src;
+              observer.unobserve(img);
+              callback && callback(img);
+            }
+          });
+        }, {
+          rootMargin: `${lazyLoadThreshold}px`
+        });
+        
+        return observer;
+      }
+    };
+  }
+}
+
 // Bundle size analyzer
 export const analyzeBundleSize = () => {
   if (process.env.NODE_ENV === 'development') {
@@ -228,6 +377,8 @@ export default {
   debounce,
   throttle,
   PerformanceCache,
+  DatabaseOptimizer,
+  ReactOptimizer,
   analyzeBundleSize,
   performanceMonitor,
   memoryMonitor,

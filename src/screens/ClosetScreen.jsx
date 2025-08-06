@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import GlassCard from '../components/GlassCard';
-import { useThemes } from '../hooks/useThemes';
+import { useTheme } from '../hooks/useTheme';
 import { useCloset } from '../hooks/useCloset';
 import { useAuth } from '../hooks/useAuth';
 import { gradientThemes } from '../styles/theme';
@@ -226,7 +226,8 @@ const ItemsGrid = styled.div`
   }
 `;
 
-const ItemCard = styled(GlassCard)`
+// Styled components for memoized components
+const StyledItemCard = styled(GlassCard)`
   padding: 1.5rem;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -304,6 +305,192 @@ const ItemCard = styled(GlassCard)`
       }};
   }
 `;
+
+const StyledFilterTab = styled.button`
+  padding: 0.5rem 2rem;
+  border-radius: 12px;
+  border: 2px solid ${({ active, theme }) => (active ? theme.colors.accent.gold : 'transparent')};
+  background: ${({ active, theme, type }) => {
+    if (active) {
+      return type === 'main' ? theme.colors.accent.gold : theme.colors.accent.purple;
+    }
+    return 'rgba(255, 255, 255, 0.05)';
+  }};
+  color: ${({ active, theme }) => 
+    active ? (theme.colors.background === '#000000' ? '#000000' : theme.colors.text.primary) : theme.colors.text.secondary};
+  font-weight: ${({ active }) => active ? '600' : '500'};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-width: fit-content;
+  
+  &:hover {
+    background: ${({ active, theme, type }) => {
+      if (active) return null;
+      return type === 'main' ? 'rgba(255, 176, 0, 0.1)' : 'rgba(76, 28, 140, 0.1)';
+    }};
+    transform: translateY(-1px);
+  }
+`;
+
+const StyledFloatingStatsButton = styled.button`
+  position: fixed;
+  top: 100px;
+  right: 20px;
+  z-index: 1000;
+  background: linear-gradient(135deg, #FFB000, #FFD700);
+  border: none;
+  border-radius: 50px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255, 176, 0, 0.3);
+  transition: all 0.3s ease;
+  font-weight: 600;
+  color: #000;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(255, 176, 0, 0.4);
+  }
+  
+  .stats-icon {
+    font-size: 1.2rem;
+  }
+  
+  .stats-count {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  
+  @media (max-width: 768px) {
+    top: 80px;
+    right: 15px;
+    padding: 10px 14px;
+    
+    .stats-icon {
+      font-size: 1rem;
+    }
+    
+    .stats-count {
+      font-size: 0.9rem;
+    }
+  }
+`;
+
+const ItemCard = memo(({ item, onClick, isLimitedEdition }) => (
+  <StyledItemCard 
+    rarity={item.rarity}
+    isLimitedEdition={isLimitedEdition}
+    onClick={onClick}
+    style={item.category === 'themes' ? {
+      background: item.gradient,
+      border: item.equipped ? '3px solid #FFD700' : '3px solid rgba(255, 255, 255, 0.2)',
+      opacity: item.unlocked ? 1 : 0.6
+    } : {}}
+  >
+    {/* Mint Number Badge */}
+    {item.mint_number && (
+      <MintNumberBadge>
+        #{item.mint_number}
+      </MintNumberBadge>
+    )}
+    
+    <CardContent>
+      <CardIcon>
+        {item.preview_mp4 && item.file_type === '3d_model' ? (
+          <VideoPreview
+            autoPlay
+            loop
+            muted
+            playsInline
+            src={item.preview_mp4}
+          />
+        ) : (
+          <div style={{ 
+            fontSize: item.category === 'themes' ? '3rem' : '3rem',
+            position: 'relative' 
+          }}>
+            {getItemIcon(item.category, item.item_type, item)}
+            {item.category === 'themes' && !item.unlocked && (
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                fontSize: '1.5rem',
+                color: '#fff',
+                textShadow: '0 0 4px rgba(0,0,0,0.8)'
+              }}>
+                🔒
+              </div>
+            )}
+            {item.category === 'themes' && item.equipped && (
+              <div style={{
+                position: 'absolute',
+                top: '-10px',
+                right: '-10px',
+                fontSize: '1rem',
+                color: '#FFD700'
+              }}>
+                ✓
+              </div>
+            )}
+          </div>
+        )}
+      </CardIcon>
+      
+      <div>
+        <CardName>{item.name}</CardName>
+        <CardRarity rarity={item.rarity}>{item.rarity}</CardRarity>
+        
+        {/* Theme-specific indicators */}
+        {item.category === 'themes' && item.equipped && (
+          <div style={{ 
+            color: '#FFD700', 
+            fontSize: '0.6rem', 
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            ✓ Equipped
+          </div>
+        )}
+        {item.category === 'themes' && !item.unlocked && (
+          <div style={{ 
+            color: '#ff6b6b', 
+            fontSize: '0.6rem', 
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            🔒 Locked
+          </div>
+        )}
+      </div>
+    </CardContent>
+  </StyledItemCard>
+));
+
+// Memoized FilterTab component
+const MemoizedFilterTab = memo(({ type, active, onClick, children }) => (
+  <StyledFilterTab 
+    type={type}
+    active={active} 
+    onClick={onClick}
+  >
+    {children}
+  </StyledFilterTab>
+));
+
+// Memoized FloatingStatsButton component
+const MemoizedFloatingStatsButton = memo(({ count, onClick }) => (
+  <StyledFloatingStatsButton onClick={onClick}>
+    <span className="stats-count">{count}</span>
+  </StyledFloatingStatsButton>
+));
 
 const CardIcon = styled.div`
   width: 100%;
@@ -773,7 +960,7 @@ const Description = styled.div`
 
 // Item Modal Component (using exact passport logic)
 const ItemModal = ({ item, isOpen, onClose }) => {
-  const { equipTheme, userProgress } = useThemes();
+  const { switchTheme, currentTheme } = useTheme();
   const [isFlipped, setIsFlipped] = useState(false);
   const navigate = useNavigate();
   
@@ -797,13 +984,39 @@ const ItemModal = ({ item, isOpen, onClose }) => {
   };
 
   const handleEquipTheme = async () => {
+    console.log('🎨 EQUIP THEME BUTTON CLICKED!');
+    console.log('📦 Item details:', {
+      name: item.name,
+      category: item.category,
+      unlocked: item.unlocked,
+      item_id: item.item_id,
+      equipped: item.equipped
+    });
+    
     if (item.category === 'themes' && item.unlocked) {
-      const success = await equipTheme(item.item_id);
-      if (success) {
-        onClose();
-        // Navigate to passport to see the immediate change
-        navigate('/passport');
+      console.log('✅ Conditions met, calling equipTheme...');
+      
+      try {
+        const result = await switchTheme(item.item_id);
+        console.log('🔍 switchTheme result:', result);
+        
+        if (result.success) {
+          console.log('✅ Theme equipped successfully!');
+          onClose();
+          console.log('🧭 Navigating to passport...');
+          navigate('/passport');
+        } else {
+          console.log('❌ Theme equipping failed:', result.error);
+          alert('Failed to equip theme: ' + (result.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('💥 Error in handleEquipTheme:', error);
+        alert('Error equipping theme: ' + error.message);
       }
+    } else {
+      console.log('❌ Conditions not met');
+      console.log('📦 Category check:', item.category === 'themes');
+      console.log('📦 Unlocked check:', item.unlocked);
     }
   };
 
@@ -949,16 +1162,14 @@ const ItemModal = ({ item, isOpen, onClose }) => {
 
 const ClosetScreen = () => {
   const { user, loading: authLoading } = useAuth();
-  const { equippedTheme, equipTheme, checkThemeOwnership, getThemeRequirements, userProgress, loading: themesLoading } = useThemes();
+  const { currentTheme, ownsTheme, themes, loading: themesLoading } = useTheme();
   const { 
     closetItems, 
     loading: closetLoading, 
     stats, 
     refreshCloset,
-    isCacheValid 
+    isCacheValid: closetCacheValid 
   } = useCloset();
-
-
 
   const [mainFilter, setMainFilter] = useState('all');
   const [subFilter, setSubFilter] = useState('all');
@@ -966,37 +1177,38 @@ const ClosetScreen = () => {
   const [showStatsModal, setShowStatsModal] = useState(false);
   const navigate = useNavigate();
 
+  // Memoized theme items calculation
   const themeItems = useMemo(() => {
-    return Object.entries(gradientThemes).map(([key, theme]) => {
-      const themeRequirements = getThemeRequirements(key);
-      const isUnlocked = checkThemeOwnership(key);
+    return themes.map((theme) => {
+      const isUnlocked = ownsTheme(theme.key);
       
       return {
-        id: `theme-${key}`,
+        id: `theme-${theme.key}`,
         item_type: 'digital_collectible',
-        item_id: key,
+        item_id: theme.key,
         name: theme.name,
-        rarity: 'epic', // All themes are epic rarity
+        rarity: 'epic',
         category: 'themes',
-        gradient: theme.gradient,
+        gradient: theme.colors.backgroundGradient || theme.colors.background,
         icon: '🎨',
-        description: themeRequirements?.description || '',
-        requirements: themeRequirements?.requirements || [],
-        unlocked: isUnlocked, // Use real unlock status
-        equipped: equippedTheme === key,
+        description: theme.description || '',
+        requirements: [],
+        unlocked: isUnlocked,
+        equipped: currentTheme === theme.key,
         earned_date: '2025-03-01',
         earned_via: 'unlock',
         wings_earned: 0
       };
     });
-  }, [gradientThemes, getThemeRequirements, checkThemeOwnership, equippedTheme]);
+  }, [themes, ownsTheme, currentTheme]);
 
+  // Memoized all items
   const allItems = useMemo(() => 
     [...closetItems, ...themeItems], 
     [closetItems, themeItems]
   );
 
-  // Enhanced items
+  // Memoized enhanced items
   const enhancedItems = useMemo(() => 
     allItems.map(item => ({
       ...item,
@@ -1005,20 +1217,18 @@ const ClosetScreen = () => {
     [allItems]
   );
 
+  // Memoized filtered items
   const filteredItems = useMemo(() => 
     enhancedItems.filter(item => {
-      // Main filter (Physical/Digital)
       if (mainFilter === 'physical' && item.item_type !== 'physical_item') return false;
       if (mainFilter === 'digital' && item.item_type !== 'digital_collectible') return false;
-
-      // Sub filter (category)
       if (subFilter !== 'all' && item.category !== subFilter) return false;
-
       return true;
     }), 
     [enhancedItems, mainFilter, subFilter]
   );
 
+  // Memoized sub filter options
   const subFilterOptions = useMemo(() => {
     const categories = [...new Set(allItems
       .filter(item => {
@@ -1031,14 +1241,37 @@ const ClosetScreen = () => {
     return categories.sort();
   }, [allItems, mainFilter]);
 
-  const displayStats = {
+  // Memoized display stats
+  const displayStats = useMemo(() => ({
     total: stats.total,
     physical: stats.physical,
     digital: stats.digital,
     limited: stats.limited,
     legendary: stats.legendary,
     epic: stats.epic,
-  };
+  }), [stats]);
+
+  // Memoized callback functions
+  const handleItemClick = useCallback((item) => {
+    setSelectedItem(item);
+  }, []);
+
+  const handleMainFilterChange = useCallback((filter) => {
+    setMainFilter(filter);
+    setSubFilter('all');
+  }, []);
+
+  const handleSubFilterChange = useCallback((filter) => {
+    setSubFilter(filter);
+  }, []);
+
+  const handleStatsModalToggle = useCallback(() => {
+    setShowStatsModal(prev => !prev);
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setSelectedItem(null);
+  }, []);
 
   // Show loading only if we're actually loading AND don't have any data yet
   const shouldShowLoading = (authLoading || themesLoading || closetLoading) && 
@@ -1119,11 +1352,11 @@ const ClosetScreen = () => {
           alignItems: 'center',
           gap: '0.5rem'
         }}>
-          {isCacheValid && (
+          {closetCacheValid && (
             <>
               <span>🔄 Cached</span>
               <button 
-                onClick={() => refreshCloset()}
+                onClick={refreshCloset}
                 style={{
                   background: 'rgba(255, 176, 0, 0.1)',
                   border: '1px solid rgba(255, 176, 0, 0.3)',
@@ -1138,26 +1371,23 @@ const ClosetScreen = () => {
               </button>
             </>
           )}
-          
-
         </div>
-              </div>
+      </div>
         
-
-        
-        <>
-          {/* Floating Stats Button */}
-        <FloatingStatsButton onClick={() => setShowStatsModal(true)}>
-          <span className="stats-count">{displayStats.total}</span>
-        </FloatingStatsButton>
+      <>
+        {/* Floating Stats Button */}
+        <MemoizedFloatingStatsButton 
+          count={displayStats.total} 
+          onClick={handleStatsModalToggle}
+        />
 
         {/* Stats Modal */}
         {showStatsModal && (
-          <StatsModal onClick={() => setShowStatsModal(false)}>
+          <StatsModal onClick={handleStatsModalToggle}>
             <ModalContent onClick={(e) => e.stopPropagation()}>
               <ModalHeader>
                 <h2>Collection Stats</h2>
-                <CloseButton onClick={() => setShowStatsModal(false)}>×</CloseButton>
+                <CloseButton onClick={handleStatsModalToggle}>×</CloseButton>
               </ModalHeader>
               <StatsGrid>
                 <StatItem>
@@ -1189,195 +1419,95 @@ const ClosetScreen = () => {
           </StatsModal>
         )}
 
+        <MainFilterTabs>
+          <MemoizedFilterTab 
+            type="main"
+            active={mainFilter === 'all'} 
+            onClick={() => handleMainFilterChange('all')}
+          >
+            All Items
+          </MemoizedFilterTab>
+          <MemoizedFilterTab 
+            type="main"
+            active={mainFilter === 'physical'} 
+            onClick={() => handleMainFilterChange('physical')}
+          >
+            Physical
+          </MemoizedFilterTab>
+          <MemoizedFilterTab 
+            type="main"
+            active={mainFilter === 'digital'} 
+            onClick={() => handleMainFilterChange('digital')}
+          >
+            Digital
+          </MemoizedFilterTab>
+        </MainFilterTabs>
 
-
-          <MainFilterTabs>
-            <FilterTab 
-              type="main"
-              active={mainFilter === 'all'} 
-              onClick={() => {
-                setMainFilter('all');
-                setSubFilter('all');
-              }}
-            >
-              All Items
-            </FilterTab>
-            <FilterTab 
-              type="main"
-              active={mainFilter === 'physical'} 
-              onClick={() => {
-                setMainFilter('physical');
-                setSubFilter('all');
-              }}
-            >
-              Physical
-            </FilterTab>
-            <FilterTab 
-              type="main"
-              active={mainFilter === 'digital'} 
-              onClick={() => {
-                setMainFilter('digital');
-                setSubFilter('all');
-              }}
-            >
-              Digital
-            </FilterTab>
-
-          </MainFilterTabs>
-
-          <SubFilterTabs>
-            <FilterTab 
+        <SubFilterTabs>
+          <MemoizedFilterTab 
+            type="sub"
+            active={subFilter === 'all'} 
+            onClick={() => handleSubFilterChange('all')}
+          >
+            All Categories
+          </MemoizedFilterTab>
+          {subFilterOptions.map(category => (
+            <MemoizedFilterTab 
+              key={category}
               type="sub"
-              active={subFilter === 'all'} 
-              onClick={() => setSubFilter('all')}
+              active={subFilter === category} 
+              onClick={() => handleSubFilterChange(category)}
             >
-              All Categories
-            </FilterTab>
-            {subFilterOptions.map(category => (
-              <FilterTab 
-                key={category}
-                type="sub"
-                active={subFilter === category} 
-                onClick={() => setSubFilter(category)}
-              >
-                {getCategoryDisplayName(category)}
-              </FilterTab>
+              {getCategoryDisplayName(category)}
+            </MemoizedFilterTab>
+          ))}
+        </SubFilterTabs>
+
+        {filteredItems.length > 0 ? (
+          <ItemsGrid>
+            {filteredItems.map(item => (
+              <ItemCard 
+                key={item.id}
+                item={item}
+                onClick={() => handleItemClick(item)}
+                isLimitedEdition={item.isLimitedEdition}
+              />
             ))}
-          </SubFilterTabs>
+          </ItemsGrid>
+        ) : (
+          <EmptyState>
+            {closetLoading ? (
+              <>
+                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⏳</div>
+                <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Loading your closet...</div>
+                <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)' }}>Checking for your Papillon treasures</div>
+              </>
+            ) : mainFilter === 'all' ? (
+              <>
+                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>👕</div>
+                <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Your closet is looking a bit empty...</div>
+                <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)' }}>Start scanning QR codes to collect your first Papillon items!</div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔍</div>
+                <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>No {mainFilter} items found</div>
+                <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)' }}>Try scanning more QR codes or check other categories</div>
+              </>
+            )}
+          </EmptyState>
+        )}
 
-          {filteredItems.length > 0 ? (
-            <ItemsGrid>
-              {filteredItems.map(item => (
-                <ItemCard 
-                  key={item.id}
-                  rarity={item.rarity}
-                  isLimitedEdition={item.isLimitedEdition}
-                  onClick={() => setSelectedItem(item)}
-                  style={item.category === 'themes' ? {
-                    background: item.gradient,
-                    border: item.equipped ? '3px solid #FFD700' : '3px solid rgba(255, 255, 255, 0.2)',
-                    opacity: item.unlocked ? 1 : 0.6
-                  } : {}}
-                >
-
-                  
-                  {/* Mint Number Badge */}
-                  {item.mint_number && (
-                    <MintNumberBadge>
-                      #{item.mint_number}
-                    </MintNumberBadge>
-                  )}
-                  
-                  <CardContent>
-                    <CardIcon>
-                      {item.preview_mp4 && item.file_type === '3d_model' ? (
-                        <VideoPreview
-                          autoPlay
-                          loop
-                          muted
-                          playsInline
-                          src={item.preview_mp4}
-                        />
-                      ) : (
-                        <div style={{ 
-                          fontSize: item.category === 'themes' ? '3rem' : '3rem',
-                          position: 'relative' 
-                        }}>
-                          {getItemIcon(item.category, item.item_type, item)}
-                          {item.category === 'themes' && !item.unlocked && (
-                            <div style={{
-                              position: 'absolute',
-                              top: '50%',
-                              left: '50%',
-                              transform: 'translate(-50%, -50%)',
-                              fontSize: '1.5rem',
-                              color: '#fff',
-                              textShadow: '0 0 4px rgba(0,0,0,0.8)'
-                            }}>
-                              🔒
-                            </div>
-                          )}
-                          {item.category === 'themes' && item.equipped && (
-                            <div style={{
-                              position: 'absolute',
-                              top: '-10px',
-                              right: '-10px',
-                              fontSize: '1rem',
-                              color: '#FFD700'
-                            }}>
-                              ✓
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </CardIcon>
-                    
-                    <div>
-                      <CardName>{item.name}</CardName>
-                      <CardRarity rarity={item.rarity}>{item.rarity}</CardRarity>
-                      
-                      {/* Theme-specific indicators */}
-                      {item.category === 'themes' && item.equipped && (
-                        <div style={{ 
-                          color: '#FFD700', 
-                          fontSize: '0.6rem', 
-                          fontWeight: '600',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px'
-                        }}>
-                          ✓ Equipped
-                        </div>
-                      )}
-                      {item.category === 'themes' && !item.unlocked && (
-                        <div style={{ 
-                          color: '#ff6b6b', 
-                          fontSize: '0.6rem', 
-                          fontWeight: '600',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px'
-                        }}>
-                          🔒 Locked
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </ItemCard>
-              ))}
-            </ItemsGrid>
-          ) : (
-            <EmptyState>
-              {closetLoading ? (
-                <>
-                  <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>⏳</div>
-                  <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Loading your closet...</div>
-                  <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)' }}>Checking for your Papillon treasures</div>
-                </>
-              ) : mainFilter === 'all' ? (
-                <>
-                  <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>👕</div>
-                  <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Your closet is looking a bit empty...</div>
-                  <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)' }}>Start scanning QR codes to collect your first Papillon items!</div>
-                </>
-              ) : (
-                <>
-                  <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🔍</div>
-                  <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>No {mainFilter} items found</div>
-                  <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.6)' }}>Try scanning more QR codes or check other categories</div>
-                </>
-              )}
-            </EmptyState>
-          )}
-
-          {/* Item Modal */}
-          <ItemModal
-            item={selectedItem}
-            isOpen={!!selectedItem}
-            onClose={() => setSelectedItem(null)}
-          />
-        </>
+        {/* Item Modal */}
+        <ItemModal
+          item={selectedItem}
+          isOpen={!!selectedItem}
+          onClose={handleCloseModal}
+        />
+      </>
         
-        {/* Navigation Bar */}
-        <NavBar />
+      {/* Navigation Bar */}
+      <NavBar />
     </Container>
   );
 };

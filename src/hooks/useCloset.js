@@ -20,8 +20,8 @@ export const useCloset = () => {
     common: 0
   });
 
-  // Cache duration: 30 seconds
-  const CACHE_DURATION = 30 * 1000;
+  // Increased cache duration to 2 minutes for better performance
+  const CACHE_DURATION = 2 * 60 * 1000;
 
   // Check if cache is still valid
   const isCacheValid = useMemo(() => {
@@ -29,7 +29,7 @@ export const useCloset = () => {
     return Date.now() - lastFetch < CACHE_DURATION;
   }, [lastFetch]);
 
-  // Simplified closet data fetch
+  // Optimized closet data fetch with single query and better error handling
   const fetchClosetItems = useCallback(async (forceRefresh = false) => {
     if (!user) {
       return;
@@ -44,97 +44,113 @@ export const useCloset = () => {
       setLoading(true);
       setError(null);
 
-      // First check if user profile exists
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError) {
-        // Create user profile if it doesn't exist
-        const { error: createError } = await supabase
-          .from('user_profiles')
-          .insert({
-            id: user.id,
-            email: user.email,
-            username: user.user_metadata?.username || user.email?.split('@')[0] || 'user',
-            full_name: user.user_metadata?.full_name || user.user_metadata?.username || user.email?.split('@')[0] || 'User',
-            wings_balance: 0,
-            current_week_wings: 0,
-            week_start_date: new Date().toISOString(),
-            role: 'user',
-            clothing_size: user.user_metadata?.clothing_size || null
-          });
-
-        if (createError) {
-          throw createError;
-        }
-      }
-
-      // Single query for all closet items
+      // Use the optimized database function for better performance
       const { data, error } = await supabase
-        .from('user_closet')
-        .select(`
-          *,
-          rewards:reward_id (
-            name,
-            description,
-            category,
-            rarity,
-            wings_value,
-            season,
-            image_url,
-            is_active
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('earned_date', { ascending: false });
+        .rpc('get_user_closet_cards', { user_id_param: user.id });
 
       if (error) {
-        throw error;
+        // Fallback to direct query if function doesn't exist
+        console.warn('Optimized function not available, using fallback query');
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('user_closet')
+          .select(`
+            *,
+            rewards:reward_id (
+              name,
+              description,
+              category,
+              rarity,
+              wings_value,
+              season,
+              image_url,
+              is_active
+            )
+          `)
+          .eq('user_id', user.id)
+          .order('earned_date', { ascending: false });
+
+        if (fallbackError) {
+          throw fallbackError;
+        }
+        
+        // Process fallback data
+        const processedItems = (fallbackData || []).map(item => ({
+          id: item.id,
+          item_id: item.reward_id,
+          name: item.name || item.rewards?.name || 'Unknown Item',
+          rarity: item.rarity || item.rewards?.rarity || 'common',
+          category: item.category || item.rewards?.category || 'misc',
+          mint_number: item.mint_number,
+          wings_earned: item.wings_earned || item.rewards?.wings_value || 0,
+          earned_date: item.earned_date,
+          earned_via: item.earned_via,
+          is_equipped: item.is_equipped || false,
+          reward_data: item.rewards,
+          image_url: item.rewards?.image_url
+        }));
+
+        setClosetItems(processedItems);
+        updateStats(processedItems);
+      } else {
+        // Use optimized function data
+        setClosetItems(data || []);
+        updateStats(data || []);
       }
 
-      // Process items with rarity-based system
-      const processedItems = (data || []).map(item => ({
-        id: item.id,
-        item_id: item.reward_id,
-        name: item.name || item.rewards?.name || 'Unknown Item',
-        rarity: item.rarity || item.rewards?.rarity || 'common',
-        category: item.category || item.rewards?.category || 'misc',
-        mint_number: item.mint_number,
-        wings_earned: item.wings_earned || item.rewards?.wings_value || 0,
-        earned_date: item.earned_date,
-        earned_via: item.earned_via,
-        is_equipped: item.is_equipped || false,
-        reward_data: item.rewards,
-        image_url: item.rewards?.image_url
-      }));
-
-      setClosetItems(processedItems);
-
-      // Calculate stats based on rarity
-      const newStats = {
-        total: processedItems.length,
-        physical: processedItems.filter(item => item.category !== 'themes').length,
-        digital: processedItems.filter(item => item.category === 'themes').length,
-        limited: processedItems.filter(item => item.rarity === 'legendary').length,
-        legendary: processedItems.filter(item => item.rarity === 'legendary').length,
-        epic: processedItems.filter(item => item.rarity === 'epic').length,
-        rare: processedItems.filter(item => item.rarity === 'rare').length,
-        uncommon: processedItems.filter(item => item.rarity === 'uncommon').length,
-        common: processedItems.filter(item => item.rarity === 'common').length
-      };
-
-      setStats(newStats);
       setLastFetch(Date.now());
 
     } catch (err) {
+      console.error('Error fetching closet items:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [user, isCacheValid]);
+  }, [user, isCacheValid, closetItems.length]);
+
+  // Optimized stats calculation
+  const updateStats = useCallback((items) => {
+    const newStats = {
+      total: items.length,
+      physical: 0,
+      digital: 0,
+      limited: 0,
+      legendary: 0,
+      epic: 0,
+      rare: 0,
+      uncommon: 0,
+      common: 0
+    };
+
+    // Single pass through items for all stats
+    items.forEach(item => {
+      if (item.category !== 'themes') {
+        newStats.physical++;
+      } else {
+        newStats.digital++;
+      }
+
+      switch (item.rarity) {
+        case 'legendary':
+          newStats.legendary++;
+          newStats.limited++;
+          break;
+        case 'epic':
+          newStats.epic++;
+          break;
+        case 'rare':
+          newStats.rare++;
+          break;
+        case 'uncommon':
+          newStats.uncommon++;
+          break;
+        case 'common':
+          newStats.common++;
+          break;
+      }
+    });
+
+    setStats(newStats);
+  }, []);
 
   // Memoized computed values for better performance
   const equippedItems = useMemo(() => 
@@ -164,7 +180,7 @@ export const useCloset = () => {
     return rarities;
   }, [closetItems]);
 
-  // Equip/unequip an item with optimistic updates
+  // Optimized equip/unequip with better error handling
   const toggleEquipItem = useCallback(async (itemId) => {
     if (!user) return;
 
@@ -206,7 +222,7 @@ export const useCloset = () => {
     fetchClosetItems(true);
   }, [fetchClosetItems]);
 
-  // Initial load
+  // Initial load with better error handling
   useEffect(() => {
     if (user) {
       fetchClosetItems();
@@ -218,14 +234,14 @@ export const useCloset = () => {
     }
   }, [user, fetchClosetItems]);
 
-  // Fallback timeout to prevent infinite loading
+  // Reduced timeout to 5 seconds for faster feedback
   useEffect(() => {
     if (loading) {
       const timeoutId = setTimeout(() => {
         console.warn('Closet loading timeout - forcing completion');
         setLoading(false);
         setError('Loading timeout - please refresh');
-      }, 8000); // 8 second timeout
+      }, 5000); // 5 second timeout
       
       return () => clearTimeout(timeoutId);
     }

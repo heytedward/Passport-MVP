@@ -573,7 +573,7 @@ const ActionButton = styled.button`
 `;
 
 function ReferralModal({ open, onClose, user }) {
-  const { referralCode, generateReferralLink, shareReferral, isBirthdayLaunch } = useReferrals();
+  const { referralCode, generateReferralLink, shareReferral } = useReferrals();
   const [copied, setCopied] = useState(false);
   
   const handleOverlayClick = (e) => {
@@ -625,7 +625,7 @@ function ReferralModal({ open, onClose, user }) {
                 {referralCode}
               </div>
               <div style={{ color: '#aaa', fontSize: '0.8rem' }}>
-                Each friend earns you {isBirthdayLaunch ? '100' : '50'} WINGS
+                Each friend earns you 50 WINGS
               </div>
             </div>
 
@@ -646,19 +646,7 @@ function ReferralModal({ open, onClose, user }) {
               </ModalButton>
             </div>
 
-            {isBirthdayLaunch && (
-              <div style={{ 
-                marginTop: '1rem', 
-                padding: '0.75rem',
-                background: 'rgba(255, 215, 0, 0.1)',
-                border: '1px solid rgba(255, 215, 0, 0.3)',
-                borderRadius: '8px',
-                fontSize: '0.85rem',
-                color: '#FFD700'
-              }}>
-                🎂 Birthday Launch Special: DOUBLE REWARDS until Sept 14th!
-              </div>
-            )}
+
 
             <div style={{ 
               marginTop: '1rem', 
@@ -669,7 +657,7 @@ function ReferralModal({ open, onClose, user }) {
               fontSize: '0.85rem',
               color: '#10B981'
             }}>
-              💡 Friends get {isBirthdayLaunch ? '50' : '25'} WINGS for joining + {isBirthdayLaunch ? '50' : '25'} more for their first scan!
+              💡 Friends get 25 WINGS for joining + 25 more for their first scan!
             </div>
           </div>
         ) : (

@@ -17,18 +17,9 @@ export const getSocialShareTemplate = (referralCode, platform = 'instagram') => 
   return templates[platform] || templates.general;
 };
 
-export const getBirthdayLaunchTemplate = (referralCode) => {
-  return {
-    text: `🎂 IT'S MONARCH PASSPORT'S BIRTHDAY WEEK! 🦋\n\nJoin the celebration with DOUBLE REFERRAL REWARDS!\n\n✨ 50 WINGS for joining (normally 25)\n🎁 50 more for first scan (normally 25)\n👑 I get 100 WINGS when you scan (normally 50)\n\nUse code: ${referralCode}\n\nBirthday bonuses end Sept 14th!\n\n#MonarchBirthday #DoubleRewards`,
-    hashtags: ['MonarchBirthday', 'DoubleRewards', 'MonarchPassport']
-  };
-};
 
-export const getShareMessageForPlatform = (referralCode, platform, isBirthdayLaunch = false) => {
-  if (isBirthdayLaunch) {
-    return getBirthdayLaunchTemplate(referralCode);
-  }
-  
+
+export const getShareMessageForPlatform = (referralCode, platform) => {
   return getSocialShareTemplate(referralCode, platform);
 };
 
@@ -36,10 +27,8 @@ export const generateShareLink = (referralCode, baseUrl = window.location.origin
   return `${baseUrl}/join/${referralCode}`;
 };
 
-export const createInstagramStoryContent = (referralCode, userName, isBirthdayLaunch = false) => {
-  const baseMessage = isBirthdayLaunch 
-    ? getBirthdayLaunchTemplate(referralCode)
-    : getSocialShareTemplate(referralCode, 'instagram');
+export const createInstagramStoryContent = (referralCode, userName) => {
+  const baseMessage = getSocialShareTemplate(referralCode, 'instagram');
   
   return {
     text: baseMessage.text,

@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import GlobalStyle from './styles/GlobalStyle';
 import theme from './styles/theme';
+import { supabase } from './utils/supabaseClient';
+import { useTheme } from './hooks/useTheme';
 
 // Lazy load components for better performance
 const HomeScreen = React.lazy(() => import('./screens/HomeScreen'));
@@ -16,7 +18,7 @@ const QuestsScreen = React.lazy(() => import('./screens/QuestsScreen'));
 const SeasonRoadmapScreen = React.lazy(() => import('./screens/SeasonRoadmapScreen'));
 const AdminScreen = React.lazy(() => import('./screens/AdminScreen'));
 const WelcomeScreen = React.lazy(() => import('./screens/WelcomeScreen'));
-const ThemeProgressTester = React.lazy(() => import('./components/ThemeProgressTester'));
+
 
 // Components
 const ProtectedRoute = React.lazy(() => import('./components/ProtectedRoute'));
@@ -37,6 +39,11 @@ const LoadingSpinner = () => (
 );
 
 function App() {
+  // Make supabase available globally for testing
+  if (typeof window !== 'undefined') {
+    window.supabase = supabase;
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyle />
@@ -58,7 +65,6 @@ function App() {
             <Route path="/quests" element={<QuestsScreen />} />
             <Route path="/roadmap" element={<SeasonRoadmapScreen />} />
             <Route path="/admin" element={<AdminScreen />} />
-            <Route path="/test-themes" element={<ThemeProgressTester />} />
           </Route>
           
           {/* Fallback route */}

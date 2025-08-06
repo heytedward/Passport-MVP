@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
+import { useAuth } from '../hooks/useAuth';
 
 const AvatarContainer = styled.div`
   position: relative;
@@ -18,12 +19,13 @@ const AvatarImage = styled.img`
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
+  display: ${props => props.show ? 'block' : 'none'};
 `;
 
 const AvatarPlaceholder = styled.div`
   width: 100%;
   height: 100%;
-  display: flex;
+  display: ${props => props.show ? 'flex' : 'none'};
   align-items: center;
   justify-content: center;
   font-size: ${props => Math.max(12, props.size * 0.3)}px;
@@ -32,29 +34,67 @@ const AvatarPlaceholder = styled.div`
 `;
 
 const AvatarDisplay = ({ 
-  avatarUrl, 
+  avatarUrl: propAvatarUrl, 
   size = 40, 
   alt = "User avatar",
   showBorder = true,
-  className 
+  className,
+  forceRefresh = false
 }) => {
+  const { avatarUrl: contextAvatarUrl } = useAuth();
+  const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Use prop avatarUrl if provided, otherwise use context avatarUrl
+  const finalAvatarUrl = propAvatarUrl || contextAvatarUrl;
+
+  // Add cache busting if forceRefresh is true
+  const getAvatarUrlWithCacheBusting = (url) => {
+    if (!url) return null;
+    if (forceRefresh) {
+      try {
+        const urlObj = new URL(url);
+        urlObj.searchParams.set('t', Date.now());
+        return urlObj.toString();
+      } catch (e) {
+        return url;
+      }
+    }
+    return url;
+  };
+
+  const displayUrl = getAvatarUrlWithCacheBusting(finalAvatarUrl);
+  const showImage = displayUrl && !imageError;
+  const showPlaceholder = !displayUrl || imageError;
+
+  const handleImageLoad = () => {
+    setImageLoaded(true);
+    setImageError(false);
+  };
+
+  const handleImageError = () => {
+    console.warn('Avatar image failed to load:', displayUrl);
+    setImageError(true);
+    setImageLoaded(false);
+  };
+
   return (
     <AvatarContainer 
       size={size} 
       className={className}
       style={!showBorder ? { border: 'none', boxShadow: 'none' } : {}}
     >
-      {avatarUrl ? (
-        <AvatarImage 
-          src={avatarUrl} 
-          alt={alt}
-          onError={(e) => {
-            e.target.style.display = 'none';
-            e.target.nextSibling.style.display = 'flex';
-          }}
-        />
-      ) : null}
-      <AvatarPlaceholder size={size}>
+      <AvatarImage 
+        src={displayUrl}
+        alt={alt}
+        show={showImage}
+        onLoad={handleImageLoad}
+        onError={handleImageError}
+      />
+      <AvatarPlaceholder 
+        size={size}
+        show={showPlaceholder}
+      >
         🦋
       </AvatarPlaceholder>
     </AvatarContainer>

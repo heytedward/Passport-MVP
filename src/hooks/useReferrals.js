@@ -18,167 +18,127 @@ export const useReferrals = () => {
   });
   const [referralHistory, setReferralHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [referralLoading, setReferralLoading] = useState(true);
   const [error, setError] = useState(null);
   const hasInitializedRef = useRef(false);
   const isProcessingRef = useRef(false);
   const lastUserRef = useRef(null);
   const setReferralCodeTimeoutRef = useRef(null);
 
-  // Birthday launch bonus configuration
-  const BIRTHDAY_LAUNCH = {
-    startDate: '2025-09-07',
-    endDate: '2025-09-14',
-    bonusMultiplier: 2
-  };
-
-  const isBirthdayLaunch = () => {
-    const now = new Date();
-    const start = new Date(BIRTHDAY_LAUNCH.startDate);
-    const end = new Date(BIRTHDAY_LAUNCH.endDate);
-    return now >= start && now <= end;
-  };
 
   // Generate referral code from username/email
   const generateReferralCode = useCallback((user) => {
     if (!user) return null;
-    
+
     const username = user.user_metadata?.username || user.email?.split('@')[0] || 'user';
     const cleanUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '');
     const shortCode = cleanUsername.substring(0, 6);
     const randomSuffix = Math.random().toString(36).substring(2, 5);
-    
+
     return `${shortCode}${randomSuffix}`.toUpperCase();
   }, []);
 
-  // Create or get existing referral code
+  // Optimized referral code generation with aggressive fallbacks
   const ensureReferralCode = useCallback(async () => {
-    if (!user) {
-      console.log('❌ ensureReferralCode: No user provided');
-      return null;
-    }
+    if (!user) return;
 
-    // Prevent multiple simultaneous calls
-    if (referralCode) {
-      console.log('✅ Referral code already exists:', referralCode);
-      return referralCode;
-    }
-
-    // Prevent multiple initialization attempts
-    if (hasInitializedRef.current) {
-      console.log('🔄 ensureReferralCode: Already initialized, skipping');
-      return referralCode;
-    }
-
-    // Prevent concurrent processing
-    if (isProcessingRef.current) {
-      console.log('🔄 ensureReferralCode: Already processing, skipping');
-      return referralCode;
-    }
-
-    isProcessingRef.current = true;
-    hasInitializedRef.current = true;
-    console.log('🔧 ensureReferralCode: Starting for user:', user.id);
-
-    // Set a timeout to prevent infinite loading
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Referral code generation timeout')), 10000)
-    );
+    setReferralLoading(true);
 
     try {
-      // Check if Supabase is properly configured
-      if (!process.env.REACT_APP_SUPABASE_URL || !process.env.REACT_APP_SUPABASE_ANON_KEY) {
-        console.log('⚠️ Supabase environment variables not configured, generating fallback code');
-        const fallbackCode = generateReferralCode(user);
-        setReferralCode(fallbackCode);
-        return fallbackCode;
+      console.log('🔗 Ensuring referral code for user:', user.id);
+
+      // Check if we already have a cached referral code
+      const cachedCode = localStorage.getItem(`referral_${user.id}`);
+      if (cachedCode) {
+        try {
+          const parsed = JSON.parse(cachedCode);
+          const cacheAge = Date.now() - parsed.timestamp;
+          if (cacheAge < 30 * 60 * 1000) { // 30 minutes cache
+            console.log('🔗 Using cached referral code:', parsed.code);
+            setReferralCode(parsed.code);
+            setReferralLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.log('🔗 Cache parse error, proceeding with fresh generation');
+        }
       }
 
-      console.log('🔍 Checking for existing referral code...');
-      
-      // Race between the database query and timeout
-      const queryPromise = supabase
-        .from('referral_codes')
-        .select('referral_code')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .single();
+      // Try database query with very short timeout
+      let dbCode = null;
+      let dbError = null;
 
-      const { data: existingCode, error: fetchError } = await Promise.race([queryPromise, timeoutPromise]);
+      try {
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Referral code generation timeout')), 3000) // Very short timeout
+        );
 
-      console.log('📊 Existing code query result:', { existingCode, fetchError });
-
-      if (existingCode) {
-        console.log('✅ Found existing referral code:', existingCode.referral_code);
-        // Clear any pending timeout
-        if (setReferralCodeTimeoutRef.current) {
-          clearTimeout(setReferralCodeTimeoutRef.current);
-        }
-        // Set code immediately if it's different
-        if (referralCode !== existingCode.referral_code) {
-          setReferralCode(existingCode.referral_code);
-        }
-        return existingCode.referral_code;
-      }
-
-      console.log('🆕 No existing code found, generating new one...');
-      // Create new referral code
-      let attempts = 0;
-      let newCode;
-      let created = false;
-
-      while (!created && attempts < 5) {
-        newCode = generateReferralCode(user);
-        console.log(`🎲 Attempt ${attempts + 1}: Generated code ${newCode}`);
-        
-        const insertPromise = supabase
-          .from('referral_codes')
-          .insert([{ user_id: user.id, referral_code: newCode }])
+        const queryPromise = supabase
+          .from('user_profiles')
           .select('referral_code')
+          .eq('id', user.id)
           .single();
 
-        const { data: createdCode, error: createError } = await Promise.race([insertPromise, timeoutPromise]);
+        const { data: profile, error } = await Promise.race([queryPromise, timeoutPromise]);
 
-        console.log('💾 Insert result:', { createdCode, createError });
-
-        if (!createError) {
-          console.log('✅ Successfully created referral code:', createdCode.referral_code);
-          // Clear any pending timeout
-          if (setReferralCodeTimeoutRef.current) {
-            clearTimeout(setReferralCodeTimeoutRef.current);
-          }
-          // Set code immediately if it's different
-          if (referralCode !== createdCode.referral_code) {
-            setReferralCode(createdCode.referral_code);
-          }
-          return createdCode.referral_code;
-        } else if (createError.code === '23505') {
-          // Code already exists, try again
-          console.log('⚠️ Code collision, trying again...');
-          attempts++;
+        if (!error && profile?.referral_code) {
+          dbCode = profile.referral_code;
+          console.log('🔗 Database query successful, found code:', dbCode);
         } else {
-          throw createError;
+          dbError = error;
+          console.log('🔗 Database query failed or no code found:', error);
         }
+      } catch (timeoutError) {
+        console.log('🔗 Database query timed out, using fallback');
+        dbError = timeoutError;
       }
 
-      throw new Error('Failed to generate unique referral code');
+      // Process the referral code
+      let finalCode;
+
+      if (dbCode) {
+        // Use database code
+        finalCode = dbCode;
+        console.log('🔗 Using database code:', finalCode);
+      } else {
+        // Generate fallback code
+        console.log('🔗 Generating fallback referral code');
+        finalCode = generateLocalReferralCode();
+        console.log('🔗 Generated fallback code:', finalCode);
+      }
+
+      // Cache the code
+      localStorage.setItem(`referral_${user.id}`, JSON.stringify({
+        code: finalCode,
+        timestamp: Date.now()
+      }));
+
+      setReferralCode(finalCode);
+      setReferralLoading(false);
 
     } catch (error) {
-      console.error('❌ Error ensuring referral code:', error);
-      setError(error.message);
-      
-      // If it's a timeout, try to generate a fallback code
-      if (error.message.includes('timeout')) {
-        console.log('⏰ Timeout occurred, generating fallback code');
-        const fallbackCode = generateReferralCode(user);
-        setReferralCode(fallbackCode);
-        return fallbackCode;
-      }
-      
-      return null;
-    } finally {
-      isProcessingRef.current = false;
+      console.error('🔗 Critical error ensuring referral code:', error);
+
+      // Last resort fallback
+      const fallbackCode = generateLocalReferralCode();
+      console.log('🔗 Using last resort fallback code:', fallbackCode);
+
+      localStorage.setItem(`referral_${user.id}`, JSON.stringify({
+        code: fallbackCode,
+        timestamp: Date.now()
+      }));
+
+      setReferralCode(fallbackCode);
+      setReferralLoading(false);
     }
-  }, [user, generateReferralCode]);
+  }, [user]);
+
+  // Helper function to generate a local referral code
+  const generateLocalReferralCode = () => {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 8);
+    return `MONARCH${timestamp}${random}`.toUpperCase();
+  };
 
   // Load referral statistics
   const loadReferralStats = useCallback(async () => {
@@ -244,8 +204,8 @@ export const useReferrals = () => {
 
       const formattedHistory = referrals?.map(referral => ({
         id: referral.id,
-        refereeName: referral.referee?.user_metadata?.username || 
-                    referral.referee?.email?.split('@')[0] || 
+        refereeName: referral.referee?.user_metadata?.username ||
+                    referral.referee?.email?.split('@')[0] ||
                     'User',
         refereeEmail: referral.referee?.email,
         status: referral.status,
@@ -291,11 +251,6 @@ export const useReferrals = () => {
 
       let welcomeBonus = 25; // WINGS for joining via referral
 
-      // Apply birthday launch bonus
-      if (isBirthdayLaunch()) {
-        welcomeBonus *= BIRTHDAY_LAUNCH.bonusMultiplier;
-      }
-
       // Create referral record
       const { data: referralData, error: referralError } = await supabase
         .from('referrals')
@@ -318,7 +273,7 @@ export const useReferrals = () => {
         user_id_param: newUserId,
         wings_amount: welcomeBonus,
         activity_type_param: 'referral_bonus',
-        description_param: `Welcome bonus for joining via referral code: ${referralCode}${isBirthdayLaunch() ? ' (Birthday Launch 2x Bonus!)' : ''}`
+        description_param: `Welcome bonus for joining via referral code: ${referralCode}`
       });
 
       if (wingsError) {
@@ -355,12 +310,6 @@ export const useReferrals = () => {
       let referrerReward = 50; // WINGS for successful referral
       let refereeReward = 25;  // Additional WINGS for first action
 
-      // Apply birthday launch bonus
-      if (isBirthdayLaunch()) {
-        referrerReward *= BIRTHDAY_LAUNCH.bonusMultiplier;
-        refereeReward *= BIRTHDAY_LAUNCH.bonusMultiplier;
-      }
-
       // Update referral as completed
       const { error: updateError } = await supabase
         .from('referrals')
@@ -376,8 +325,6 @@ export const useReferrals = () => {
 
       if (updateError) throw updateError;
 
-      const birthdayBonus = isBirthdayLaunch() ? ' (Birthday Launch 2x Bonus!)' : '';
-
       // Award WINGS to both users using RPC
       await Promise.all([
         // Referrer reward
@@ -385,14 +332,14 @@ export const useReferrals = () => {
           user_id_param: referral.referrer_id,
           wings_amount: referrerReward,
           activity_type_param: 'referral',
-          description_param: `Referral completed - friend completed first scan${birthdayBonus}`
+          description_param: `Referral completed - friend completed first scan`
         }),
         // Referee additional reward
         supabase.rpc('add_wings_to_user', {
           user_id_param: refereeId,
           wings_amount: refereeReward,
           activity_type_param: 'referral_bonus',
-          description_param: `First scan bonus - referred user reward${birthdayBonus}`
+          description_param: `First scan bonus - referred user reward`
         })
       ]);
 
@@ -426,11 +373,6 @@ export const useReferrals = () => {
     
     let shareText = `Join me on Monarch Passport! 🦋\n\nEarn exclusive fashion rewards by scanning QR codes. Use my code: ${code}`;
     
-    // Add birthday launch messaging
-    if (isBirthdayLaunch()) {
-      shareText = `🎂 IT'S MONARCH PASSPORT'S BIRTHDAY WEEK! 🦋\n\nJoin the celebration with DOUBLE REFERRAL REWARDS!\n\n✨ 50 WINGS for joining (normally 25)\n🎁 50 more for first scan (normally 25)\n👑 I get 100 WINGS when you scan (normally 50)\n\nUse code: ${code}\n\nBirthday bonuses end Sept 14th!`;
-    }
-
     if (navigator.share) {
       try {
         await navigator.share({
@@ -484,10 +426,11 @@ export const useReferrals = () => {
       });
       setReferralHistory([]);
       setLoading(false);
+      setReferralLoading(false);
       hasInitializedRef.current = false; // Reset for next user
       isProcessingRef.current = false; // Reset for next user
     }
-  }, [user]); // Only depend on user, not the callback functions
+  }, [user, ensureReferralCode]); // Only depend on user, not the callback functions
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -503,15 +446,16 @@ export const useReferrals = () => {
     referralStats,
     referralHistory,
     loading,
+    referralLoading,
+    setReferralLoading,
     error,
     processReferralSignup,
     completeReferral,
     generateReferralLink,
     shareReferral,
-    isBirthdayLaunch: isBirthdayLaunch(),
     refreshData: () => {
       loadReferralStats();
       loadReferralHistory();
     }
   };
-}; 
+};
