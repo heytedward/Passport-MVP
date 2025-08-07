@@ -18,6 +18,10 @@ const QuestsScreen = React.lazy(() => import('./screens/QuestsScreen'));
 const SeasonRoadmapScreen = React.lazy(() => import('./screens/SeasonRoadmapScreen'));
 const AdminScreen = React.lazy(() => import('./screens/AdminScreen'));
 const WelcomeScreen = React.lazy(() => import('./screens/WelcomeScreen'));
+const CircularQRGenerator = React.lazy(() => import('./components/CircularQRGenerator'));
+const TestQRGenerator = React.lazy(() => import('./components/TestQRGenerator'));
+const SVGQRGenerator = React.lazy(() => import('./components/SVGQRGenerator'));
+const PNGQRGenerator = React.lazy(() => import('./components/PNGQRGenerator'));
 
 
 // Components
@@ -66,6 +70,12 @@ function App() {
             <Route path="/roadmap" element={<SeasonRoadmapScreen />} />
             <Route path="/admin" element={<AdminScreen />} />
           </Route>
+          
+          {/* Development/Testing routes */}
+          <Route path="/qr-generator" element={<CircularQRGenerator />} />
+          <Route path="/test-qr" element={<TestQRGenerator />} />
+          <Route path="/svg-qr" element={<SVGQRGenerator />} />
+          <Route path="/png-qr" element={<PNGQRGenerator />} />
           
           {/* Fallback route */}
           <Route path="*" element={<Navigate to="/" replace />} />

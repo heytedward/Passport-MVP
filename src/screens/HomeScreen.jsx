@@ -616,7 +616,7 @@ function HomeScreen() {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                marginLeft: '130px',
+                marginLeft: '120px',
                 marginRight: 'auto',
                 position: 'relative',
                 left: '0'

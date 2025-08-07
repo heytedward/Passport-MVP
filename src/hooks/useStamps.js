@@ -105,11 +105,12 @@ export const useStamps = () => {
   const totalCount = STAMPS.length;
   const completionPercentage = Math.round((unlockedCount / totalCount) * 100);
   
-  // Load user stamps from database
-  const loadUserStamps = useCallback(async () => {
-    console.log('🔍 loadUserStamps called - User ID:', user?.id);
+  // Load user stamps from database with enhanced timeout handling
+  const loadUserStamps = useCallback(async (userId) => {
+    const targetUserId = userId || user?.id;
+    console.log('🔍 loadUserStamps called - User ID:', targetUserId);
     
-    if (!user?.id) {
+    if (!targetUserId) {
       console.log('⚠️ No user ID found, setting empty stamps and loading false');
       setUserStamps([]);
       setLoading(false);
@@ -117,39 +118,38 @@ export const useStamps = () => {
       return;
     }
 
+    setLoading(true);
+    setError(null);
+    
     try {
-      setLoading(true);
-      setError(null);
       console.log('🔍 Starting database query for user stamps...');
-
-      const { data, error } = await withTimeout(
-        supabase
-          .from('user_stamps')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false }),
-        2000 // 2 second timeout
+      
+      // Add timeout wrapper with 10 second timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
       );
-
-      if (error) {
-        console.warn('⚠️ Stamps database timeout, using fallback');
-        // Set default stamps to prevent blocking
-        setUserStamps([]);
-        setError(null); // Don't show error for timeouts
-        return;
-      }
-
+      
+      const queryPromise = supabase
+        .from('user_stamps')
+        .select('*')
+        .eq('user_id', targetUserId)
+        .order('created_at', { ascending: false });
+      
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+      
+      if (error) throw error;
+      
       setUserStamps(data || []);
-      console.log('✅ User stamps loaded successfully:', data?.length || 0, 'stamps');
+      console.log('✅ Stamps loaded successfully:', data?.length || 0, 'stamps');
     } catch (err) {
-      console.warn('⚠️ Stamps loading failed:', err);
-      // Fallback data
+      console.error('❌ Stamps loading failed:', err);
+      setError(err.message);
+      // Don't block the app - set empty stamps array
       setUserStamps([]);
-      setError(null); // Don't show error for timeouts
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   // Check if user has a specific stamp
   const hasStamp = useCallback((stampId) => {
@@ -271,12 +271,30 @@ export const useStamps = () => {
     });
   }, [awardStamp]);
 
-  // Load stamps when user authentication changes
+  // Load stamps when user authentication changes with race condition prevention
   useEffect(() => {
     console.log('🔍 useStamps useEffect triggered - User ID:', user?.id);
+    
     // Only load stamps if we have finished the initial auth check
     if (user?.id || user === null) {
-      loadUserStamps();
+      // Use a flag to prevent race conditions
+      let isMounted = true;
+      
+      const loadStamps = async () => {
+        try {
+          await loadUserStamps();
+        } catch (error) {
+          if (isMounted) {
+            console.error('❌ Error in stamps useEffect:', error);
+          }
+        }
+      };
+      
+      loadStamps();
+      
+      return () => {
+        isMounted = false;
+      };
     }
   }, [user?.id, loadUserStamps]);
 
